@@ -85,7 +85,7 @@ psxy ${first_file} -R -J -Wthick,red  -O -P >> ${plot}
 
 plot="flowline_test.ps"
 
-./../flowlines2 ${grid_spacing}
+./../flowlines ${grid_spacing}
 
 psxy ${second_file}  ${J_option} ${R_option} ${B_option} -Wthick,blue -K -P  > ${plot}
 
