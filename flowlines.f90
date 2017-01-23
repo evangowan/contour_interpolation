@@ -77,8 +77,10 @@ program flowlines2
 					  /fining_increment) + 1
 
 			do extra_counter = 1, extra_total, 1
-				current_x = x_coordinates(1,polygon_counter,points_counter) + dble(extra_counter-1) * cos(angle)
-				current_y = y_coordinates(1,polygon_counter,points_counter) + dble(extra_counter-1) * sin(angle)
+				current_x = x_coordinates(1,polygon_counter,points_counter) + &
+				     dble(extra_counter-1)*fining_increment * cos(angle)
+				current_y = y_coordinates(1,polygon_counter,points_counter) + &
+				     dble(extra_counter-1)*fining_increment * sin(angle)
 
 
 				write(gmt_unit,'(A1)') divider_character
@@ -86,7 +88,7 @@ program flowlines2
 				write(gmt_unit,*) current_x, current_y
 			!	write(666,'(A1)') divider_character
 
-				write(567,'(A1)') divider_character
+
 
 				call find_grid_index(current_x, current_y, grid_spacing, x_grid_index, y_grid_index)
 
