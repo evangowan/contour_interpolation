@@ -2,11 +2,12 @@ program contour_creation
 
 	implicit none
 	double precision :: distance_factor, target_distance, current_distance, distance_add, angle, x, y, part_distance
+	double precision :: contour_density
 
 	double precision, dimension(:), allocatable :: total_distance
 	double precision, dimension(:,:), allocatable :: x_array, y_array
 
-	integer :: commandline_count, number_lines, istat, max_points, points_counter, line
+	integer :: commandline_count, number_lines, istat, max_points, points_counter, line, line_step, step_counter
 	integer, parameter :: gmt_unit = 90, out_unit=100
 	integer, dimension(:), allocatable :: points_array
 
@@ -25,10 +26,16 @@ program contour_creation
 		stop
 	endif
 
+	! the density of points along the flowline. Note it must be between 0 and 1
 	call GET_COMMAND_ARGUMENT(1,arg_in) 
 	read(arg_in,*) distance_factor
 
+	if (distance_factor >= 1 .or. distance_factor <= 0) THEN
+		write(6,*) "distance_factor must be between 0 and 1"
+		stop
+	endif
 
+	line_step = int(1./distance_factor)
 
 	open(unit=gmt_unit, file=gmt_file, access="sequential", form="formatted", status="old")
 
@@ -118,46 +125,51 @@ program contour_creation
 
 	do line = 1, number_lines
 
-		target_distance = total_distance(line) * distance_factor
+		write(out_unit,*) x_array(line,1), y_array(line,1), 0.
 
-		write(6,*) line, target_distance, total_distance(line)
+		do step_counter = 1, line_step, 1
 
-		if(target_distance > 0.) THEN
-			current_distance = 0.
-
-			go_the_distance: do points_counter = 2, points_array(line)
-				distance_add = sqrt((x_array(line,points_counter)-x_array(line,points_counter-1))**2 &
-				               + (y_array(line,points_counter)-y_array(line,points_counter-1))**2)
-
-				if(current_distance + distance_add > target_distance) THEN
-
-					part_distance = target_distance - current_distance
-
-					angle = atan2((y_array(line,points_counter) - y_array(line,points_counter-1)), &
-						  (x_array(line,points_counter) - x_array(line,points_counter-1)))
-					x = cos(angle) * part_distance + x_array(line,points_counter-1)
-					y = sin(angle) * part_distance + y_array(line,points_counter-1)
-
-					write(6,*) line, current_distance, target_distance
-
-					exit go_the_distance
+			target_distance = total_distance(line) * (distance_factor * dble(step_counter))
 
 
-				else
+			if(target_distance > 0.) THEN
+				current_distance = 0.
 
-					current_distance = current_distance + distance_add
-				endif
+				go_the_distance: do points_counter = 2, points_array(line)
+					distance_add = sqrt((x_array(line,points_counter)-x_array(line,points_counter-1))**2 &
+						         + (y_array(line,points_counter)-y_array(line,points_counter-1))**2)
 
-			end do go_the_distance
+					if(current_distance + distance_add > target_distance) THEN
 
-		else
+						part_distance = target_distance - current_distance
 
-			x = x_array(line,1)
-			y = y_array(line,1)
+						angle = atan2((y_array(line,points_counter) - y_array(line,points_counter-1)), &
+							  (x_array(line,points_counter) - x_array(line,points_counter-1)))
+						x = cos(angle) * part_distance + x_array(line,points_counter-1)
+						y = sin(angle) * part_distance + y_array(line,points_counter-1)
 
-		end if
 
-		write(out_unit,*) x, y
+						exit go_the_distance
+
+
+					else
+
+						current_distance = current_distance + distance_add
+					endif
+
+				end do go_the_distance
+
+			else
+
+				x = x_array(line,1)
+				y = y_array(line,1)
+
+			end if
+
+			write(out_unit,*) x, y, (distance_factor * dble(step_counter))
+		end do
+
+		write(out_unit,*) x_array(line,points_array(line)), y_array(line,points_array(line)), 1.
 
 	end do
 

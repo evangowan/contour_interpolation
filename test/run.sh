@@ -54,7 +54,7 @@ cat params.txt
 
 triangulate direction_file.bin  -bi3d -boI -V > direction_file.tin
 
-grid_spacing=5
+grid_spacing=20
 
 tin_file_size=$( du -b direction_file.tin | awk '{print $1}' )
 
@@ -100,11 +100,11 @@ psxy flowlines.txt  -R -J -Wthin,black -K -O -P  >> ${plot}
 #psxy fort.545 -R -J -Sc0.22 -Wthick,pink -O -K -P >> ${plot}
 psxy fort.546 -R -J -Sc0.22 -Wthick,yellow -O -K -P >> ${plot}
 
-./../contour_creation 0.5
+./../contour_creation 0.25
 
 psxy final_contour.txt -R -J -Sd0.15 -Gpurple -O -K -P >> ${plot}
 
-./../contour_creation 0.25
+./../contour_creation 0.5
 
 psxy final_contour.txt -R -J -Sd0.15 -Gbrown -O -K -P >> ${plot}
 
@@ -114,9 +114,9 @@ psxy final_contour.txt -R -J -Sd0.15 -Gbrown -O -K -P >> ${plot}
 psxy final_contour.txt -R -J -Sd0.15 -Gmagenta -O -K -P >> ${plot}
 
 
-./../contour_creation 0.95
+#./../contour_creation 0.95
 
-psxy final_contour.txt -R -J -Sd0.15 -Gcyan -O -K -P >> ${plot}
+#psxy final_contour.txt -R -J -Sd0.15 -Gcyan -O -K -P >> ${plot}
 
 
 
