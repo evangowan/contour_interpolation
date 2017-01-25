@@ -69,7 +69,6 @@ subroutine read_polygons_init()
 
 			if(divider == divider_character) THEN
 				polygon_counter = polygon_counter + 1
-				
 				cycle read_polygons
 			elseif (divider == ignore_character) THEN ! anything starting with '#' should be ignored
 				cycle read_polygons
@@ -92,20 +91,20 @@ subroutine read_polygons_init()
 						add_points = int(distance / fining_increment)
 
 						angle = atan2(&
-						  y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)-1)-y, &
-						  x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)-1)-x)
+						 y - y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)-1), &
+						 x - x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)-1))
 
 						do add_counter = 1, add_points
 
 							
 
 							x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) = &
-							  x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) + &
+						x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)-add_counter) + &
 							  cos(angle) * dble(add_counter) / dble(add_points+1) * distance
 							y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) = &
-							  y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) + &
+						y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)-add_counter) + &
 							  sin(angle) * dble(add_counter) / dble(add_points+1) * distance
-							
+
 
 							polygon_points(counter,polygon_counter) = polygon_points(counter,polygon_counter) + 1
 							call check_array(polygon_points(counter,polygon_counter))
