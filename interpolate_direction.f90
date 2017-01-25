@@ -74,7 +74,7 @@ program interpolate_direction
 	character (len=256), parameter :: gmt_file = "direction_grid.txt"
 
 
-	logical :: check_inside
+	logical :: check_inside, check_infinity
 	logical, dimension(:,:), allocatable :: polygon_max
 
 	! requires two input parameters from command line, the grid spacing and the size of the tin file in bytes
@@ -168,6 +168,12 @@ program interpolate_direction
 			intercept1 = y_triangle(1) - slope1 * x_triangle(1)
 
 			distance1 = sqrt( (y_triangle(1) - y_triangle(2))**2 + (x_triangle(1) - x_triangle(2))**2)
+
+			if(x_triangle(1) == x_triangle(2)) THEN
+				check_infinity = .true.
+			else
+				check_infinity = .false.
+			endif
 		
 			! find the range of x and y values, and convert them to a range for the direction_grid array
 
@@ -215,11 +221,29 @@ program interpolate_direction
 							slope2 = (y_triangle(3) - current_y) / (x_triangle(3) - current_x)
 							angle2 = atan2((y_triangle(1) - y_triangle(2)),(x_triangle(1) - x_triangle(2)))
 							intercept2 = y_triangle(3) - slope2 * x_triangle(3)
-					
-							! find the crossover point between the two lines
 
-							crossover_x = (intercept1 - intercept2) / (slope2 - slope1)
-							crossover_y = slope1 * crossover_x + intercept1
+							if(.not.check_infinity) THEN
+
+								! find the crossover point between the two lines
+
+								if(x_triangle(3) /= current_x) THEN
+
+									crossover_x = (intercept1 - intercept2) / (slope2 - slope1)
+									crossover_y = slope1 * crossover_x + intercept1
+
+								else
+
+									crossover_x = current_x
+									crossover_y = slope1 * current_x + intercept1
+
+								endif
+					
+							else
+								crossover_x = x_triangle(1)
+								crossover_y = slope2 * x_triangle(1) + intercept2
+
+							endif
+
 
 							! next interpolate the angle along line 1 to the crossover point
 
@@ -254,6 +278,18 @@ program interpolate_direction
 
 
 							interpolate2 = general_direction(direction_triangle(3), interpolate1, interpolate_factor)
+
+							if(isnan(interpolate2)) THEN
+								write(6,*) slope2, slope1
+								write(6,*) direction_triangle(1), direction_triangle(2), direction_triangle(3)
+								write(6,*) x_triangle(1), y_triangle(1)
+								write(6,*) x_triangle(2), y_triangle(2)
+								write(6,*) x_triangle(3), y_triangle(3)
+								write(6,*) current_x, current_y
+								write(6,*) distance1, distance2, distance3, distance4
+								write(6,*) interpolate1, interpolate_factor
+								stop
+							endif
 
 							direction_grid(x_counter, y_counter) = interpolate2
 

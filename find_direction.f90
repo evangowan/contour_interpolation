@@ -223,6 +223,7 @@ program find_direction
 				record_counter=record_counter+1
 				write(dir_unit,rec=record_counter) atan2(y_component,x_component)
 
+
 				write(dir_text_unit,*) current_x, current_y, atan2(y_component,x_component) * 180. / pi, 0.5 ! 0.5 is the length of vector for plotting in GMT
 
 			end do

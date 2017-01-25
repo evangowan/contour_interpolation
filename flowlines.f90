@@ -70,24 +70,22 @@ program flowlines2
 				index_next = 1
 			endif
 			! add some points in between if there is a large space
-			angle = atan2((y_coordinates(1,polygon_counter,index_next) - y_coordinates(1,polygon_counter,points_counter)), &
-				  (x_coordinates(1,polygon_counter,index_next) - x_coordinates(1,polygon_counter,points_counter)))
+!			angle = atan2((y_coordinates(1,polygon_counter,index_next) - y_coordinates(1,polygon_counter,points_counter)), &
+!				  (x_coordinates(1,polygon_counter,index_next) - x_coordinates(1,polygon_counter,points_counter)))
 
-			extra_total = int(sqrt((y_coordinates(1,polygon_counter,index_next) - &
-					            y_coordinates(1,polygon_counter,points_counter))**2 + &
-					  (x_coordinates(1,polygon_counter,index_next) - x_coordinates(1,polygon_counter,points_counter))**2)&
-					  /fining_increment) + 1
+!			extra_total = int(sqrt((y_coordinates(1,polygon_counter,index_next) - &
+!					            y_coordinates(1,polygon_counter,points_counter))**2 + &
+!					  (x_coordinates(1,polygon_counter,index_next) - x_coordinates(1,polygon_counter,points_counter))**2)&
+!					  /fining_increment) + 1
 
-			do extra_counter = 1, extra_total, 1
+!			do extra_counter = 1, extra_total, 1
 
 
 
 				flowline_point_count = 1
 
-				x_flowline_store(flowline_point_count) = x_coordinates(1,polygon_counter,points_counter) + &
-				     dble(extra_counter-1)*fining_increment * cos(angle)
-				y_flowline_store(flowline_point_count) = y_coordinates(1,polygon_counter,points_counter) + &
-				     dble(extra_counter-1)*fining_increment * sin(angle)
+				x_flowline_store(flowline_point_count) = x_coordinates(1,polygon_counter,points_counter) 
+				y_flowline_store(flowline_point_count) = y_coordinates(1,polygon_counter,points_counter)
 
 				call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
 				   grid_spacing, x_grid_index, y_grid_index)
@@ -109,6 +107,11 @@ program flowlines2
 					y_flowline_store(flowline_point_count) = y_flowline_store(flowline_point_count-1) +&
 					  r_increment * sin(current_direction)
 
+
+					if(isnan(x_flowline_store(flowline_point_count))) THEN
+						write(6,*) current_direction
+						stop
+					end if
 
 					call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
 					  grid_spacing, x_dummy_index, y_dummy_index) ! includes inside grid check
@@ -146,6 +149,13 @@ program flowlines2
 
 					if(flowline_point_count == max_flowline_points) THEN
 						write(6,*) "Warning: exceeded number of points, maybe went out of bounds?"
+
+						do flow_counter = 1, flowline_point_count, 1
+
+							write(887,*) x_flowline_store(flow_counter), y_flowline_store(flow_counter)
+
+						end do
+
 					endif
 
 					x_grid_index = x_dummy_index
@@ -162,7 +172,7 @@ program flowlines2
 				end do
 
 
-			end do
+!			end do
 		end do
 
 	end do
