@@ -53,6 +53,7 @@ program find_direction
 
 
 
+
 	character (len=256), parameter :: dir_file = "direction_file.bin", minmax_file = "minmax.txt"
 	character (len=256), parameter :: dir_text_file = "direction_file.txt"
 

@@ -98,7 +98,7 @@ psxy flowlines.txt  -R -J -Wthickest,green -K -O -P >> ${plot}
 psxy flowlines.txt  -R -J -Wthin,black -K -O -P  >> ${plot}
 
 #psxy fort.545 -R -J -Sc0.22 -Wthick,pink -O -K -P >> ${plot}
-psxy fort.546 -R -J -Sc0.22 -Wthick,yellow -O -K -P >> ${plot}
+
 
 ./../contour_creation 0.25
 
@@ -113,10 +113,28 @@ psxy final_contour.txt -R -J -Sd0.15 -Gbrown -O -K -P >> ${plot}
 
 psxy final_contour.txt -R -J -Sd0.15 -Gmagenta -O -K -P >> ${plot}
 
+psxy fort.546 -R -J -Sc0.22 -Wthick,yellow -O -K -P >> ${plot}
 
-#./../contour_creation 0.95
+psxy fort.547 -R -J -Sc0.22 -Wthick,pink -O  -P >> ${plot}
 
-#psxy final_contour.txt -R -J -Sd0.15 -Gcyan -O -K -P >> ${plot}
+
+
+./../contour_creation 0.1
+
+surface final_contour.txt -Gsurface.nc -I${grid_spacing} ${R_option} -Ll-0.1 -Lu1.1
+
+makecpt -Cjet -T-0.1/1.1/0.1  > shades.cpt
+
+plot=contour_plot.ps
+grdimage surface.nc  ${J_option} ${R_option} ${B_option} -K  -Cshades.cpt -P > $plot
+
+psxy ${second_file} -J -R -Wthick,blue -K -O -P  >> ${plot}
+
+psxy ${first_file} -R -J -Wthick,red  -K -O -P >> ${plot}
+
+grdcontour surface.nc -J -R  -O -Cshades.cpt -W0.75p,black -A0.2+f9p,black+gwhite >> ${plot}
+
+
 
 
 

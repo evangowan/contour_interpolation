@@ -10,13 +10,15 @@ program flowlines2
 	implicit none
 
 	integer :: commandline_count, polygon_counter, points_counter, x_grid_index, y_grid_index, x_dummy_index, y_dummy_index
-	integer :: check_peak, x_increment, y_increment, index_next, extra_counter, extra_total
-	integer, parameter :: gmt_unit = 90
+	integer :: check_peak, x_increment, y_increment, index_next, extra_counter, extra_total, flowline_point_count, flow_counter
+	integer, parameter :: gmt_unit = 90, max_flowline_points = 100000
 
 	double precision :: grid_spacing, current_x, current_y, current_direction, next_x, next_y, grid_x, grid_y, temp_x, temp_y
 	
 	double precision :: crossover_x, crossover_y, angle
-	double precision, parameter :: r_increment = 0.25, fining_increment=5
+	double precision, parameter :: r_increment = 0.25
+
+	double precision, dimension(max_flowline_points) :: x_flowline_store, y_flowline_store
 
 
 	double precision, parameter :: pi = 3.141592653589793, to_round_down = 0.00001
@@ -67,7 +69,7 @@ program flowlines2
 			else
 				index_next = 1
 			endif
-			! add some points in between if there is a larg space
+			! add some points in between if there is a large space
 			angle = atan2((y_coordinates(1,polygon_counter,index_next) - y_coordinates(1,polygon_counter,points_counter)), &
 				  (x_coordinates(1,polygon_counter,index_next) - x_coordinates(1,polygon_counter,points_counter)))
 
@@ -77,69 +79,89 @@ program flowlines2
 					  /fining_increment) + 1
 
 			do extra_counter = 1, extra_total, 1
-				current_x = x_coordinates(1,polygon_counter,points_counter) + &
+
+
+
+				flowline_point_count = 1
+
+				x_flowline_store(flowline_point_count) = x_coordinates(1,polygon_counter,points_counter) + &
 				     dble(extra_counter-1)*fining_increment * cos(angle)
-				current_y = y_coordinates(1,polygon_counter,points_counter) + &
+				y_flowline_store(flowline_point_count) = y_coordinates(1,polygon_counter,points_counter) + &
 				     dble(extra_counter-1)*fining_increment * sin(angle)
 
-
-				write(gmt_unit,'(A1)') divider_character
-
-				write(gmt_unit,*) current_x, current_y
-			!	write(666,'(A1)') divider_character
+				call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
+				   grid_spacing, x_grid_index, y_grid_index)
 
 
-
-				call find_grid_index(current_x, current_y, grid_spacing, x_grid_index, y_grid_index)
 
 				flowline_loop: do
 					! find grid points
+					flowline_point_count = flowline_point_count + 1
+
 
 
 					call find_grid_location(x_grid_index, y_grid_index, grid_spacing, grid_x, grid_y)
 
-
-
-
 					current_direction = direction_grid(x_grid_index, y_grid_index)
 
-					next_x = current_x + r_increment * cos(current_direction)
-					next_y = current_y + r_increment * sin(current_direction)
+					x_flowline_store(flowline_point_count) = x_flowline_store(flowline_point_count-1) +&
+					  r_increment * cos(current_direction)
+					y_flowline_store(flowline_point_count) = y_flowline_store(flowline_point_count-1) +&
+					  r_increment * sin(current_direction)
 
 
-					call find_grid_index(next_x, next_y, grid_spacing, x_dummy_index, y_dummy_index) ! includes inside grid check
+					call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
+					  grid_spacing, x_dummy_index, y_dummy_index) ! includes inside grid check
 
-					temp_x = next_x
-					temp_y = next_y
+
+					! check to see if the line crosses over the boundary
 
 					end_line = .false.
 
-					if(mask(2,x_grid_index, y_grid_index) == 1 .or. mask(2,x_dummy_index, y_dummy_index) == 1) THEN ! check to see if the line crosses over the boundary
+					if(mask(2,x_grid_index, y_grid_index) == 1 .or. mask(2,x_dummy_index, y_dummy_index) == 1) THEN
+						call cross_polygon(x_flowline_store(flowline_point_count-1), &
+						  y_flowline_store(flowline_point_count-1), x_flowline_store(flowline_point_count), &
+						  y_flowline_store(flowline_point_count), end_line, grid_spacing)
 
-						call crossover_point(current_x, current_y, next_x, next_y, end_line, grid_spacing)
-				
 					endif
-
-			!		write(666,*) current_x, current_y, temp_x, temp_y, next_x,next_y, mask(2,x_grid_index, y_grid_index) &
-			!			 == 1, mask(2,x_dummy_index, y_dummy_index) == 1
-
-					write(gmt_unit,*) next_x, next_y
-
 
 					if(end_line) then
 						exit flowline_loop
 					endif
 
+					! check to see if the line crosses over itself
+
+					end_line = .false.
+
+					if(flowline_point_count > 4) THEN
+
+						call cross_itself(x_flowline_store(1:flowline_point_count), &
+						  y_flowline_store(1:flowline_point_count), flowline_point_count, end_line)
+
+					endif
+
+					if(end_line) then
+						exit flowline_loop
+					endif
+
+					if(flowline_point_count == max_flowline_points) THEN
+						write(6,*) "Warning: exceeded number of points, maybe went out of bounds?"
+					endif
+
 					x_grid_index = x_dummy_index
 					y_grid_index = y_dummy_index
 
-					current_x = next_x
-					current_y = next_y
 				end do flowline_loop
 
-				if(points_counter == 8) THEn
-				!	stop
-				endif
+				write(gmt_unit,'(A1)') divider_character
+
+				do flow_counter = 1, flowline_point_count, 1
+
+					write(gmt_unit,*) x_flowline_store(flow_counter), y_flowline_store(flow_counter)
+
+				end do
+
+
 			end do
 		end do
 
@@ -154,9 +176,9 @@ program flowlines2
 
 contains
 
-subroutine crossover_point(current_x, current_y, next_x, next_y, end_line, grid_spacing)
+subroutine cross_polygon(current_x, current_y, next_x, next_y, end_line, grid_spacing)
 
-	! find out if there is an overlap between the 
+	! find out if there is an overlap between the current line segment and the inner polygons
 
 	use read_polygons
 
@@ -168,30 +190,15 @@ subroutine crossover_point(current_x, current_y, next_x, next_y, end_line, grid_
 
 
 
-	integer :: polygon_counter, points_counter, next_index, x_index1, y_index1, x_index2, y_index2
+	integer :: polygon_counter, points_counter, next_index
 
-	double precision :: slope1, slope2, intercept1, intercept2, temp_x, temp_y1, temp_y2
-	double precision :: seg_x1, seg_x2, seg_y1, seg_y2, min_cell_x, min_cell_y, max_cell_x, max_cell_y
 
-	double precision, parameter :: small = 1e-8
+	double precision :: seg_x1, seg_x2, seg_y1, seg_y2, temp_x, temp_y
 
-	logical :: vertical_line1, vertical_line2
+	logical :: is_crossover
 
-	if(current_x /= next_x) THEN
+	end_line = .false.
 
-		slope1 = (current_y - next_y) / (current_x - next_x) 
-		intercept1 = current_y - current_x * slope1
-		vertical_line1 = .false.
-	else
-
-		vertical_line2 = .true.
-
-	endif
-
-	min_cell_x = min(current_x, next_x)
-	min_cell_y = min(current_y, next_y)
-	max_cell_x = max(current_x, next_x)
-	max_cell_y = max(current_y, next_y)
 
 	polygon_loop: do polygon_counter = 1, number_polygons(2), 1
 		points_loop: do points_counter = 1, polygon_points(2, polygon_counter), 1
@@ -208,44 +215,10 @@ subroutine crossover_point(current_x, current_y, next_x, next_y, end_line, grid_
 			seg_y2 = y_coordinates(2,polygon_counter,next_index)
 
 
-			if(seg_x2 /= seg_x1) THEN
-				slope2 = (seg_y2 - seg_y1) / (seg_x2 - seg_x1)
-				intercept2 = seg_y2 - slope2 * seg_x2
-				vertical_line2 = .false.
-			else
-				vertical_line2 = .true.
-			endif
+			call crossover_point(current_x, current_y, next_x, next_y, seg_x1, seg_y1, seg_x2, seg_y2, &
+			  temp_x, temp_y, is_crossover)
 
-
-			if( vertical_line1 .and. .not. vertical_line2 ) THEN
-
-				temp_x = current_x
-				temp_y = slope2 * temp_x + intercept2
-
-			elseif(vertical_line2 .and. .not. vertical_line1) THEN
-
-				temp_x = seg_x1
-				temp_y = slope1 * temp_x + intercept1
-
-			elseif (vertical_line1 .and. vertical_line2) THEN
-
-				temp_x = current_x
-
-
-				if(min(seg_y1,seg_y2) < min_cell_y) then
-					temp_y = (max(seg_y1,seg_y2) + max_cell_y) / 2.
-				else
-					temp_y = (min(seg_y1,seg_y2) + min_cell_y) / 2.
-				endif
-
-			else
-				temp_x = (intercept2 - intercept1) / (slope1 - slope2)
-				
-
-				temp_y = slope1 * temp_x + intercept1
-			endif
-
-			if( temp_x >= min_cell_x .and. temp_x <=max_cell_x .and. temp_y >= min_cell_y .and. temp_y <= max_cell_y) THEN ! crossover
+			if( is_crossover ) THEN ! crossover
 				next_x = temp_x
 				next_y = temp_y
 				end_line = .true.
@@ -258,6 +231,128 @@ subroutine crossover_point(current_x, current_y, next_x, next_y, end_line, grid_
 	end do polygon_loop
 
 
+end subroutine cross_polygon
+
+
+
+subroutine cross_itself(x_flowline_store, y_flowline_store, flowline_point_count, end_line)
+	! checks to see if the line crosses over itself, will adjust flowline_point_count if it does
+
+	implicit none
+	integer, intent(inout) :: flowline_point_count
+	double precision, dimension(flowline_point_count), intent(inout) :: x_flowline_store, y_flowline_store
+	logical, intent(out) :: end_line
+
+	integer :: point_counter, end_index
+
+	double precision :: a_x1, a_y1, a_x2, a_y2, b_x1, b_y1, b_x2, b_y2, crossover_x, crossover_y
+	logical :: is_crossover
+
+	! for ease of reading
+
+	a_x1 = x_flowline_store(flowline_point_count-1)
+	a_y1 = y_flowline_store(flowline_point_count-1)
+	a_x2 = x_flowline_store(flowline_point_count)
+	a_y2 = y_flowline_store(flowline_point_count)
+	is_crossover = .false.
+
+	point_loop: do point_counter = 1, flowline_point_count-3, 1 ! shouldn't need to check the last line, unless there is a freak case where the line goes completely the opposite way
+
+		b_x1 = x_flowline_store(point_counter)
+		b_y1 = y_flowline_store(point_counter)
+		b_x2 = x_flowline_store(point_counter+1)
+		b_y2 = y_flowline_store(point_counter+1)
+		
+		call crossover_point(a_x1, a_y1, a_x2, a_y2, b_x1, b_y1, b_x2, b_y2, crossover_x, crossover_y, is_crossover)
+
+		if(is_crossover) THEN
+			write(548,*) ">", point_counter, flowline_point_count
+			write(548,*) a_x1, a_y1,b_x1, b_y1,  crossover_x, crossover_y
+			write(548,*) a_x2, a_y2,b_x2, b_y2
+			end_index = point_counter
+			exit point_loop
+
+		end if
+
+	end do point_loop
+
+	if(is_crossover) THEN
+
+	!	write(6,*) end_index, flowline_point_count
+		flowline_point_count = end_index
+		x_flowline_store(end_index) = crossover_x
+		y_flowline_store(end_index) = crossover_y
+		end_line = .true.
+		write(547,*) crossover_x, crossover_y
+	else
+		end_line = .false.
+	end if
+
+end subroutine cross_itself
+
+
+subroutine crossover_point(a_x1, a_y1, a_x2, a_y2, b_x1, b_y1, b_x2, b_y2, crossover_x, crossover_y, is_crossover)
+
+	! checks if the two given line segments overlap. If they do, this subroutine returns the crossover point
+
+	implicit none
+
+	double precision, intent(in) :: a_x1, a_y1, a_x2, a_y2, b_x1, b_y1, b_x2, b_y2
+	double precision, intent(out) :: crossover_x, crossover_y
+	logical, intent(out) :: is_crossover
+
+	double precision :: slope1, slope2, intercept1, intercept2, a_min_cell_x, a_min_cell_y, a_max_cell_x, a_max_cell_y
+	double precision :: b_min_cell_x, b_min_cell_y, b_max_cell_x, b_max_cell_y
+	double precision :: temp_x, temp_y1, temp_y2
+	double precision, parameter :: threshold = 1e6
+
+	logical :: vertical_line1, vertical_line2
+
+	if(a_x1 /= a_x2) THEN
+		
+		
+		vertical_line1 = .false.
+	else
+		vertical_line1 = .true.
+	endif
+
+
+	a_min_cell_x = min(a_x1, a_x2)
+	a_min_cell_y = min(a_y1, a_y2)
+	a_max_cell_x = max(a_x1, a_x2)
+	a_max_cell_y = max(a_y1, a_y2)
+
+	b_min_cell_x = min(b_x1, b_x2)
+	b_min_cell_y = min(b_y1, b_y2)
+	b_max_cell_x = max(b_x1, b_x2)
+	b_max_cell_y = max(b_y1, b_y2)
+
+
+	is_crossover = .false.
+	temp_x = 666. ! the number of the beast
+	temp_y = 3000 ! not the number of the beast
+
+
+	if(b_min_cell_x < a_max_cell_x .and. b_max_cell_x > a_min_cell_x) THEN
+		if(b_min_cell_y < a_max_cell_y .and. b_max_cell_y > a_min_cell_y) THEN ! should be a crossover
+			is_crossover = .true.
+
+			slope1 = (a_y2 - a_y1) / (a_x2 - a_x1) 
+			intercept1 = a_y2 - a_x2 * slope1
+
+			slope2 = (b_y2 - b_y1) / (b_x2 - b_x1) 
+			intercept2 = b_y2 - b_x2 * slope2
+
+			temp_x = (intercept2 - intercept1) / (slope1 - slope2)
+			temp_y = slope1 * temp_x + intercept1
+
+		endif
+	endif
+
+
+
+	crossover_x = temp_x
+	crossover_y = temp_y
 end subroutine crossover_point
 
 end program flowlines2

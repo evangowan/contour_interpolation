@@ -12,12 +12,12 @@ module read_polygons
 	implicit none
 
 	integer :: max_polygons
-	integer, parameter ::  max_points = 100000
+	integer, parameter ::  max_points = 100000, step_unit = 20
 	integer, dimension(2) :: number_polygons
 	integer, dimension(:,:), allocatable :: polygon_points
 
 	double precision, dimension(:,:,:), allocatable :: x_coordinates, y_coordinates
-
+	double precision, parameter :: fining_increment=5
 	character (len=256), dimension(2) :: step_file
 
 
@@ -27,8 +27,10 @@ subroutine read_polygons_init()
 
 	implicit none
 
-	integer :: istat, counter, polygon_counter
-	integer, parameter :: param_unit=10, step_unit = 20
+	integer :: istat, counter, polygon_counter, add_points, add_counter
+	integer, parameter :: param_unit=10
+
+	double precision :: x, y, distance, angle
 
 	character (len=1) :: divider ! make sure that there are no spaces before the ">" character or this will mess up
 	character (len=1), parameter :: divider_character = ">", ignore_character = "#"
@@ -73,17 +75,49 @@ subroutine read_polygons_init()
 				cycle read_polygons
 			else
 				backspace(unit=step_unit)
+
 				polygon_points(counter,polygon_counter) = polygon_points(counter,polygon_counter) + 1
-				if(polygon_points(counter,polygon_counter) > max_points) THEN
-					write(6,*) "Number of points in polygon exceeds internal memory"
-					write(6,*) "If you want to proceed, you must increase max_points"
-					write(6,*) "and recompile"
-					close(unit=step_unit)
-					stop
+				call check_array(polygon_points(counter,polygon_counter))
+
+				read(step_unit,*) x, y
+				if (polygon_points(counter,polygon_counter) > 1) THEN ! check if points need to be added
+
+					distance = sqrt(&
+					  (x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)-1)-x)**2 + &
+					  (y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)-1)-y)**2)
+
+					if(distance > fining_increment) THEN ! add points
+					! currently this just does linear interpolation, probably better in the future to do a spline
+
+						add_points = int(distance / fining_increment)
+
+						angle = atan2(&
+						  y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)-1)-y, &
+						  x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)-1)-x)
+
+						do add_counter = 1, add_points
+
+							
+
+							x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) = &
+							  x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) + &
+							  cos(angle) * dble(add_counter) / dble(add_points+1) * distance
+							y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) = &
+							  y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) + &
+							  sin(angle) * dble(add_counter) / dble(add_points+1) * distance
+							
+
+							polygon_points(counter,polygon_counter) = polygon_points(counter,polygon_counter) + 1
+							call check_array(polygon_points(counter,polygon_counter))
+
+						end do
+					endif
+
+
 				end if
 
-				read(step_unit,*) x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)), &
-							y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter))
+				x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) = x
+				y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) = y
 			endif
 
 		end do read_polygons
@@ -127,5 +161,19 @@ subroutine read_polygons_clear()
 	endif
 
 end subroutine read_polygons_clear
+
+subroutine check_array(point_count)
+
+	integer, intent(in) :: point_count
+
+	if(point_count > max_points) THEN
+		write(6,*) "Number of points in polygon exceeds internal memory"
+		write(6,*) "If you want to proceed, you must increase max_points"
+		write(6,*) "and recompile"
+		close(unit=step_unit)
+		stop
+	end if
+
+end subroutine check_array
 
 end module read_polygons
