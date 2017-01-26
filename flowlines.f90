@@ -11,12 +11,13 @@ program flowlines2
 
 	integer :: commandline_count, polygon_counter, points_counter, x_grid_index, y_grid_index, x_dummy_index, y_dummy_index
 	integer :: check_peak, x_increment, y_increment, index_next, extra_counter, extra_total, flowline_point_count, flow_counter
+	integer :: max_line, max_point
 	integer, parameter :: gmt_unit = 90, max_flowline_points = 100000
 
 	double precision :: grid_spacing, current_x, current_y, current_direction, next_x, next_y, grid_x, grid_y, temp_x, temp_y
 	
-	double precision :: crossover_x, crossover_y, angle
-	double precision, parameter :: r_increment = 0.25
+	double precision :: crossover_x, crossover_y, angle, closeness_threshold
+	double precision, parameter :: r_increment = 0.25, threshold_factor = 100.
 
 	double precision, dimension(max_flowline_points) :: x_flowline_store, y_flowline_store
 
@@ -28,7 +29,10 @@ program flowlines2
 	character(len=256), parameter :: gmt_file = "flowlines.txt"
 
 
-	logical :: found_point, end_line, round_down_x, round_down_y
+	logical :: found_point, end_line, round_down_x, round_down_y, looping, hit_saddle
+
+	closeness_threshold = r_increment / threshold_factor
+
 
 	commandline_count = command_argument_count()
 
@@ -59,7 +63,8 @@ program flowlines2
 
 	open(unit=gmt_unit, file=gmt_file, access="sequential", form="formatted", status="replace")
 
-
+	max_line = 0
+	max_point = 0
 	! at each initial boundary point, go out until it reaches the secondary boundary
 	do polygon_counter = 1, number_polygons(1)
 		do points_counter = 1, polygon_points(1, polygon_counter)
@@ -69,113 +74,139 @@ program flowlines2
 			else
 				index_next = 1
 			endif
-			! add some points in between if there is a large space
-!			angle = atan2((y_coordinates(1,polygon_counter,index_next) - y_coordinates(1,polygon_counter,points_counter)), &
-!				  (x_coordinates(1,polygon_counter,index_next) - x_coordinates(1,polygon_counter,points_counter)))
-
-!			extra_total = int(sqrt((y_coordinates(1,polygon_counter,index_next) - &
-!					            y_coordinates(1,polygon_counter,points_counter))**2 + &
-!					  (x_coordinates(1,polygon_counter,index_next) - x_coordinates(1,polygon_counter,points_counter))**2)&
-!					  /fining_increment) + 1
-
-!			do extra_counter = 1, extra_total, 1
 
 
 
-				flowline_point_count = 1
 
-				x_flowline_store(flowline_point_count) = x_coordinates(1,polygon_counter,points_counter) 
-				y_flowline_store(flowline_point_count) = y_coordinates(1,polygon_counter,points_counter)
+			flowline_point_count = 1
+
+			x_flowline_store(flowline_point_count) = x_coordinates(1,polygon_counter,points_counter) 
+			y_flowline_store(flowline_point_count) = y_coordinates(1,polygon_counter,points_counter)
+
+			call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
+			   grid_spacing, x_grid_index, y_grid_index)
+
+
+
+			flowline_loop: do
+				! find grid points
+				flowline_point_count = flowline_point_count + 1
+
+
+
+				call find_grid_location(x_grid_index, y_grid_index, grid_spacing, grid_x, grid_y)
+
+				current_direction = direction_grid(x_grid_index, y_grid_index)
+
+				x_flowline_store(flowline_point_count) = x_flowline_store(flowline_point_count-1) +&
+				  r_increment * cos(current_direction)
+				y_flowline_store(flowline_point_count) = y_flowline_store(flowline_point_count-1) +&
+				  r_increment * sin(current_direction)
+
+
+				if(isnan(x_flowline_store(flowline_point_count))) THEN
+					write(6,*) current_direction
+					stop
+				end if
 
 				call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
-				   grid_spacing, x_grid_index, y_grid_index)
+				  grid_spacing, x_dummy_index, y_dummy_index) ! includes inside grid check
+
+
+				! check to see if the line crosses over the boundary
+
+				end_line = .false.
+				looping = .false.
+				hit_saddle = .false.
+
+				if(mask(2,x_grid_index, y_grid_index) == 1 .or. mask(2,x_dummy_index, y_dummy_index) == 1) THEN
+					call cross_polygon(x_flowline_store(flowline_point_count-1), &
+					  y_flowline_store(flowline_point_count-1), x_flowline_store(flowline_point_count), &
+					  y_flowline_store(flowline_point_count), end_line, grid_spacing)
+
+				endif
+
+				if(end_line) then
+					write(549,*) "> ", points_counter, x_flowline_store(flowline_point_count), &
+					  y_flowline_store(flowline_point_count)
+					exit flowline_loop
+				endif
+
+				! check to see if the line crosses over itself
 
 
 
-				flowline_loop: do
-					! find grid points
-					flowline_point_count = flowline_point_count + 1
+				if(flowline_point_count > 4) THEN
+
+					call cross_itself(x_flowline_store(1:flowline_point_count), &
+					  y_flowline_store(1:flowline_point_count), flowline_point_count, looping)
+
+				endif
+
+				if(looping) then
+
+					write(549,*) ">>", points_counter, x_flowline_store(flowline_point_count), &
+					  y_flowline_store(flowline_point_count)
+					exit flowline_loop
+				endif
 
 
+				if(flowline_point_count > 3) THEN ! need three points to check this
 
-					call find_grid_location(x_grid_index, y_grid_index, grid_spacing, grid_x, grid_y)
-
-					current_direction = direction_grid(x_grid_index, y_grid_index)
-
-					x_flowline_store(flowline_point_count) = x_flowline_store(flowline_point_count-1) +&
-					  r_increment * cos(current_direction)
-					y_flowline_store(flowline_point_count) = y_flowline_store(flowline_point_count-1) +&
-					  r_increment * sin(current_direction)
-
-
-					if(isnan(x_flowline_store(flowline_point_count))) THEN
-						write(6,*) current_direction
-						stop
-					end if
-
-					call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
-					  grid_spacing, x_dummy_index, y_dummy_index) ! includes inside grid check
-
-
-					! check to see if the line crosses over the boundary
-
-					end_line = .false.
-
-					if(mask(2,x_grid_index, y_grid_index) == 1 .or. mask(2,x_dummy_index, y_dummy_index) == 1) THEN
-						call cross_polygon(x_flowline_store(flowline_point_count-1), &
-						  y_flowline_store(flowline_point_count-1), x_flowline_store(flowline_point_count), &
-						  y_flowline_store(flowline_point_count), end_line, grid_spacing)
-
+					if(abs(x_flowline_store(flowline_point_count) - x_flowline_store(flowline_point_count-2)) &
+						< closeness_threshold .and. &
+					   abs(y_flowline_store(flowline_point_count) - y_flowline_store(flowline_point_count-2)) &
+						< closeness_threshold) THEN
+						hit_saddle = .true.
 					endif
+				endif
 
-					if(end_line) then
-						exit flowline_loop
-					endif
+				if(hit_saddle) then
 
-					! check to see if the line crosses over itself
+					write(549,*) ">>>", points_counter, x_flowline_store(flowline_point_count), &
+					  y_flowline_store(flowline_point_count), x_flowline_store(flowline_point_count-2), &
+					  y_flowline_store(flowline_point_count-2)
+					exit flowline_loop
+				endif
 
-					end_line = .false.
+				if(flowline_point_count == max_flowline_points) THEN
+					write(6,*) "Warning: exceeded number of points, maybe went out of bounds?"
 
-					if(flowline_point_count > 4) THEN
+					do flow_counter = 1, flowline_point_count, 1
 
-						call cross_itself(x_flowline_store(1:flowline_point_count), &
-						  y_flowline_store(1:flowline_point_count), flowline_point_count, end_line)
+						write(887,*) x_flowline_store(flow_counter), y_flowline_store(flow_counter)
 
-					endif
+					end do
 
-					if(end_line) then
-						exit flowline_loop
-					endif
+				endif
 
-					if(flowline_point_count == max_flowline_points) THEN
-						write(6,*) "Warning: exceeded number of points, maybe went out of bounds?"
+				x_grid_index = x_dummy_index
+				y_grid_index = y_dummy_index
 
-						do flow_counter = 1, flowline_point_count, 1
+			end do flowline_loop
 
-							write(887,*) x_flowline_store(flow_counter), y_flowline_store(flow_counter)
+			if(.not. looping .and. .not. hit_saddle) THEN
+				if(flowline_point_count > max_point) THEN
+					max_point = flowline_point_count
+					max_line = points_counter
+				endif
 
-						end do
-
-					endif
-
-					x_grid_index = x_dummy_index
-					y_grid_index = y_dummy_index
-
-				end do flowline_loop
-
-				write(gmt_unit,'(A1)') divider_character
+				write(gmt_unit,'(A1,I7,I7)') divider_character, points_counter, flowline_point_count
 
 				do flow_counter = 1, flowline_point_count, 1
 
 					write(gmt_unit,*) x_flowline_store(flow_counter), y_flowline_store(flow_counter)
 
 				end do
+			endif
 
 
 !			end do
 		end do
 
 	end do
+
+	write(6,*) max_line, max_point
 
 	close(unit=gmt_unit)
 
@@ -339,25 +370,48 @@ subroutine crossover_point(a_x1, a_y1, a_x2, a_y2, b_x1, b_y1, b_x2, b_y2, cross
 
 
 	is_crossover = .false.
-	temp_x = 666. ! the number of the beast
-	temp_y = 3000 ! not the number of the beast
 
 
-	if(b_min_cell_x < a_max_cell_x .and. b_max_cell_x > a_min_cell_x) THEN
-		if(b_min_cell_y < a_max_cell_y .and. b_max_cell_y > a_min_cell_y) THEN ! should be a crossover
-			is_crossover = .true.
 
-			slope1 = (a_y2 - a_y1) / (a_x2 - a_x1) 
-			intercept1 = a_y2 - a_x2 * slope1
+	slope1 = (a_y2 - a_y1) / (a_x2 - a_x1) 
+	intercept1 = a_y2 - a_x2 * slope1
 
-			slope2 = (b_y2 - b_y1) / (b_x2 - b_x1) 
-			intercept2 = b_y2 - b_x2 * slope2
+	slope2 = (b_y2 - b_y1) / (b_x2 - b_x1) 
+	intercept2 = b_y2 - b_x2 * slope2
 
-			temp_x = (intercept2 - intercept1) / (slope1 - slope2)
-			temp_y = slope1 * temp_x + intercept1
+	temp_x = (intercept2 - intercept1) / (slope1 - slope2)
+	temp_y = slope1 * temp_x + intercept1
 
-		endif
+	if(a_x2 == a_x1) then
+		temp_x = a_x2
+		temp_y = slope2 * temp_x + intercept2
+	elseif(b_x2 == b_x1) THEN
+		temp_x = b_x2
+		temp_y = slope1 * temp_x + intercept1
 	endif
+
+
+	is_crossover = .false.
+	if(temp_x > a_min_cell_x) THEN
+	  if(temp_x < a_max_cell_x) THEN
+	     if(temp_x > b_min_cell_x) THEN
+		 if(temp_x < b_max_cell_x) THEN
+	   	   if(temp_y > a_min_cell_y) THEN
+		     if(temp_y < a_max_cell_y) THEN
+	   		 if(temp_y > b_min_cell_y) THEN
+			   if(temp_y < b_max_cell_y) THEN
+
+				is_crossover = .true.
+			   endif
+			 endif
+		     endif
+		   endif
+		 endif
+	     endif
+	   endif
+	endif
+
+
 
 
 
