@@ -127,6 +127,8 @@ program interpolate_direction
 		! but not within the TIN network are included. Most of the points far outside the boundary will be nonsense, 
 		! but that shouldn't matter.
 
+		write(6,*) "iteration: ", iteration
+
 		if (iteration == 1) THEN
 			check_inside = .true.
 		else
@@ -171,16 +173,23 @@ program interpolate_direction
 
 			if(x_triangle(1) == x_triangle(2)) THEN
 				check_infinity = .true.
+				write(6,*) "slope1 is infinite"
+				write(61,*) x_triangle(1), y_triangle(1)
+				write(61,*) x_triangle(2), y_triangle(2)
+				write(61,*) x_triangle(3), y_triangle(3)
+
+
 			else
 				check_infinity = .false.
 			endif
 		
 			! find the range of x and y values, and convert them to a range for the direction_grid array
 
-			min_x_index = floor((minval(x_triangle)-min_x_grid) / grid_spacing)
-			min_y_index = floor((minval(y_triangle)-min_y_grid) / grid_spacing)
-			max_x_index = ceiling((maxval(x_triangle)-min_x_grid) / grid_spacing) + 1
-			max_y_index = ceiling((maxval(y_triangle)-min_y_grid) / grid_spacing) + 1
+
+			min_x_index = nint((minval(x_triangle)-min_x_grid) / grid_spacing)
+			min_y_index = nint((minval(y_triangle)-min_y_grid) / grid_spacing)
+			max_x_index = nint((maxval(x_triangle)-min_x_grid) / grid_spacing) + 1
+			max_y_index = nint((maxval(y_triangle)-min_y_grid) / grid_spacing) + 1
 
 
 			if (max_x_index > number_x_grid) THEN
@@ -232,15 +241,27 @@ program interpolate_direction
 									crossover_y = slope1 * crossover_x + intercept1
 
 								else
-
+									write(6,*) "slope2 is infinite"
 									crossover_x = current_x
 									crossover_y = slope1 * current_x + intercept1
 
 								endif
 					
 							else
-								crossover_x = x_triangle(1)
-								crossover_y = slope2 * x_triangle(1) + intercept2
+
+								if(x_triangle(3) /= current_x) THEN
+									crossover_x = x_triangle(1)
+									crossover_y = slope2 * x_triangle(1) + intercept2
+								else ! both lines are parallel
+									write(6,*) "both lines are parallel, which makes no sense since"
+									write(6,*) "that should mean that current_x is outside of the triangle"
+									write(6,*) "1 and 2 are the same, and 3 and 4 are the same"
+
+									write(6,*) x_triangle(1), y_triangle(1)
+									write(6,*) x_triangle(2), y_triangle(2)
+									write(6,*) x_triangle(3), y_triangle(3)
+									write(6,*) current_x, current_y
+								endif
 
 							endif
 
