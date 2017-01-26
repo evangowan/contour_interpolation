@@ -17,7 +17,7 @@ module read_polygons
 	integer, dimension(:,:), allocatable :: polygon_points
 
 	double precision, dimension(:,:,:), allocatable :: x_coordinates, y_coordinates
-	double precision, parameter :: fining_increment=5
+	double precision, save :: fining_increment
 	character (len=256), dimension(2) :: step_file
 
 
@@ -40,6 +40,7 @@ subroutine read_polygons_init()
 	read(param_unit,*) number_polygons(1), number_polygons(2)
 	read(param_unit,*) step_file(1)
 	read(param_unit,*) step_file(2)
+	read(param_unit,*) fining_increment
 
 	close(unit=param_unit)
 

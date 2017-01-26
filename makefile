@@ -33,6 +33,9 @@ boundary_mask_mod.o: boundary_mask_mod.f90
 	$(FC) -o boundary_mask_mod.o -c  $(FCFLAGS) boundary_mask_mod.f90
 
 
+spline.o: spline.f90
+	$(FC) -o spline.o -c  $(FCFLAGS) spline.f90
+
 
 # programs
 
@@ -55,3 +58,6 @@ flowlines: flowlines.f90 read_polygons.o read_minmax.o boundary_mask_mod.o
 
 contour_creation: contour_creation.f90 
 	$(FC) -o contour_creation  $(FCFLAGS) contour_creation.f90 
+
+eliminate_outside: eliminate_outside.f90 point_in_polygon.o  read_polygons.o
+	$(FC) -o eliminate_outside  $(FCFLAGS) eliminate_outside.f90 point_in_polygon.o  read_polygons.o

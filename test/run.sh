@@ -26,6 +26,7 @@ B_option="-Bf${label_interval}a${sub_tick_interval} -Bx+l${x_label} -By+l${y_lab
 
 plot=outlines_only.ps
 
+grid_spacing=20
 
 psxy ${second_file}  ${J_option} ${R_option} ${B_option} -Wthick,blue -K -P  > ${plot}
 psxy ${second_file} -R -J  -K -O -P -Sc0.1 -Gblack >> ${plot}
@@ -39,6 +40,7 @@ cat << END_CAT > params.txt
 ${first_polygons} ${second_polygons}
 ${first_file}
 ${second_file}
+${grid_spacing}
 END_CAT
 
 cat params.txt
@@ -54,11 +56,13 @@ cat params.txt
 
 triangulate direction_file.bin  -bi3d -boI -V > direction_file.tin
 
-grid_spacing=20
+
 
 tin_file_size=$( du -b direction_file.tin | awk '{print $1}' )
 
 ./../interpolate_direction ${grid_spacing} ${tin_file_size}
+
+
 
 psxy direction_grid.txt -R -J -Sv0.15+e -Ggrey -K -O -P -Wthinnest >> ${plot}
 
@@ -82,6 +86,8 @@ psxy boundary_mask_2.txt  ${J_option} ${R_option} ${B_option} -Ss0.22 -Wthick -K
 
 psxy ${second_file}  -R -J -Wthick,blue -O -K -P  >> ${plot}
 psxy ${first_file} -R -J -Wthick,red  -O -P >> ${plot}
+
+
 
 plot="flowline_test.ps"
 
@@ -115,13 +121,15 @@ psxy final_contour.txt -R -J -Sd0.15 -Gmagenta -O -K -P >> ${plot}
 
 psxy fort.546 -R -J -Sc0.22 -Wthick,yellow -O -K -P >> ${plot}
 
-psxy fort.547 -R -J -Sc0.22 -Wthick,pink -O  -P >> ${plot}
+psxy fort.547 -R -J -Sc0.22 -Wthick,pink -O -K -P >> ${plot}
 
+triangulate direction_file.bin  -bi3d -M | psxy  -R -J -Wthin,black -O -P -K -V >> ${plot} 
 
+psxy fort.61 -R -J  -Wthickest,orange -O  -P >> ${plot}
 
 ./../contour_creation 0.1
 
-surface final_contour.txt -Gsurface.nc -I${grid_spacing} ${R_option} -Ll-0.1 -Lu1.1
+surface final_contour.txt -Gsurface.nc -I${grid_spacing} ${R_option} -Ll-0.1 -Lu1.1 -T0
 
 makecpt -Cjet -T-0.1/1.1/0.1  > shades.cpt
 
@@ -134,7 +142,16 @@ psxy ${first_file} -R -J -Wthick,red  -K -O -P >> ${plot}
 
 grdcontour surface.nc -J -R  -O -Cshades.cpt -W0.75p,black -A0.2+f9p,black+gwhite >> ${plot}
 
+grdcontour surface.nc -J -R  -O -Cshades.cpt -W0.75p,black -A0.2+f9p,black+gwhite -Dcontours.txt
 
+./../eliminate_outside
 
+plot="eliminate_test.ps"
+
+psxy ${second_file}  ${J_option} ${R_option} ${B_option} -Wthick,blue -K -P  > ${plot}
+
+psxy ${first_file} -R -J -Wthick,red -K -O -P >> ${plot}
+
+psxy contours_elim.txt -R -J -W0.75p,black -A0.2+f9p,black+gwhite -O -P >> ${plot}
 
 
