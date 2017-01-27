@@ -53,11 +53,11 @@ boundary_mask: boundary_mask.f90 read_polygons.o read_minmax.o boundary_mask_mod
 
 
 
-flowlines: flowlines.f90 read_polygons.o read_minmax.o boundary_mask_mod.o
-	$(FC) -o flowlines  $(FCFLAGS) flowlines.f90 read_polygons.o read_minmax.o boundary_mask_mod.o direction_grid_mod.o
+flowlines: flowlines.f90 read_polygons.o read_minmax.o boundary_mask_mod.o direction_grid_mod.o
+	$(FC) -o flowlines  $(FCFLAGS) flowlines.f90 read_polygons.o read_minmax.o boundary_mask_mod.o direction_grid_mod.o direction_grid_mod.o
 
-contour_creation: contour_creation.f90 
-	$(FC) -o contour_creation  $(FCFLAGS) contour_creation.f90 
+contour_creation: contour_creation.f90 spline.o read_polygons.o
+	$(FC) -o contour_creation  $(FCFLAGS) contour_creation.f90 spline.o read_polygons.o
 
 eliminate_outside: eliminate_outside.f90 point_in_polygon.o  read_polygons.o
 	$(FC) -o eliminate_outside  $(FCFLAGS) eliminate_outside.f90 point_in_polygon.o  read_polygons.o

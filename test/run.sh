@@ -123,9 +123,9 @@ psxy fort.546 -R -J -Sc0.22 -Wthick,yellow -O -K -P >> ${plot}
 
 psxy fort.547 -R -J -Sc0.22 -Wthick,pink -O -K -P >> ${plot}
 
-triangulate direction_file.bin  -bi3d -M | psxy  -R -J -Wthin,black -O -P -K -V >> ${plot} 
+triangulate direction_file.bin  -bi3d -M | psxy  -R -J -Wthin,black -O -P  -V >> ${plot} 
 
-psxy fort.61 -R -J  -Wthickest,orange -O  -P >> ${plot}
+#psxy fort.61 -R -J  -Wthickest,orange -O  -P >> ${plot}
 
 ./../contour_creation 0.1
 
@@ -153,5 +153,12 @@ psxy ${second_file}  ${J_option} ${R_option} ${B_option} -Wthick,blue -K -P  > $
 psxy ${first_file} -R -J -Wthick,red -K -O -P >> ${plot}
 
 psxy contours_elim.txt -R -J -W0.75p,black -A0.2+f9p,black+gwhite -O -P >> ${plot}
+
+plot=spline_plot.ps
+psxy ${second_file} ${J_option} ${R_option} ${B_option} -Wthick,blue -K  -P  > ${plot}
+
+psxy ${first_file} -R -J -Wthick,red  -K -O -P >> ${plot}
+
+psxy spline_contour.txt -R -J -O -P -Cshades.cpt >> ${plot}
 
 

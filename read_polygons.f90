@@ -12,7 +12,7 @@ module read_polygons
 	implicit none
 
 	integer :: max_polygons
-	integer, parameter ::  max_points = 100000, step_unit = 20
+	integer, parameter ::  max_points = 100000, step_unit = 20, param_unit=10
 	integer, dimension(2) :: number_polygons
 	integer, dimension(:,:), allocatable :: polygon_points
 
@@ -23,17 +23,7 @@ module read_polygons
 
 contains
 
-subroutine read_polygons_init()
-
-	implicit none
-
-	integer :: istat, counter, polygon_counter, add_points, add_counter
-	integer, parameter :: param_unit=10
-
-	double precision :: x, y, distance, angle
-
-	character (len=1) :: divider ! make sure that there are no spaces before the ">" character or this will mess up
-	character (len=1), parameter :: divider_character = ">", ignore_character = "#"
+subroutine read_params()
 
 	open(unit=param_unit, file="params.txt", access="sequential", form="formatted", status="old")
 
@@ -44,6 +34,22 @@ subroutine read_polygons_init()
 
 	close(unit=param_unit)
 
+end subroutine read_params
+
+subroutine read_polygons_init()
+
+	implicit none
+
+	integer :: istat, counter, polygon_counter, add_points, add_counter
+
+
+	double precision :: x, y, distance, angle
+
+	character (len=1) :: divider ! make sure that there are no spaces before the ">" character or this will mess up
+	character (len=1), parameter :: divider_character = ">", ignore_character = "#"
+
+
+
 	max_polygons = max(number_polygons(1),number_polygons(2))
 	allocate(x_coordinates(2,max_polygons,max_points), y_coordinates(2,max_polygons,max_points), &
 		   polygon_points(2,max_polygons), stat=istat)
@@ -52,7 +58,7 @@ subroutine read_polygons_init()
 		stop
 	endif
 
-
+	call read_params()
 
 	polygon_points = 0
 	read_files: do counter = 1, 2, 1

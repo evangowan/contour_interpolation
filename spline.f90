@@ -1,7 +1,7 @@
-! code written by Evan Gowan (evan.gowan@anu.edu.au)
+! code written by Evan Gowan (evangowan@gmail.com)
 module spline
 ! cubic_spline storage
-	integer, parameter :: spline_points = 10
+	integer, parameter :: spline_points = 20
 	double precision, dimension(spline_points), save :: x_store, y_store
 	double precision, dimension(2,spline_points), save :: parametric_parameters
 contains
