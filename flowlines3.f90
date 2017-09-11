@@ -10,27 +10,22 @@ program flowlines3
 
 	implicit none
 
-	integer :: commandline_count, polygon_counter, points_counter,  x_grid_point, y_grid_point
-	integer :: check_peak, x_increment, y_increment, index_next, extra_counter, extra_total, flowline_point_count
+	integer :: commandline_count, polygon_counter, points_counter
+	integer ::  index_next, extra_counter, extra_total, flowline_point_count
 	integer :: max_line, max_point
 	integer, parameter :: gmt_unit = 90, max_flowline_points = 100000, discard_unit=200
 
 
 
-	double precision :: grid_spacing, current_x, current_y, current_direction, next_x, next_y,  temp_x, temp_y
+	double precision :: grid_spacing
 
 	
-	double precision :: crossover_x, crossover_y, angle, closeness_threshold, r_increment
-	double precision, parameter :: r_increment_minimum = 0.1, threshold_factor = 100.
+	double precision ::  r_increment
+	double precision, parameter :: r_increment_minimum = 0.1
 
 	double precision, dimension(max_flowline_points) :: x_flowline_store, y_flowline_store, distance_store
 
-
-
 	double precision, parameter :: pi = 3.141592653589793, to_round_down = 0.00001
-
-	integer :: last_x_index, last_y_index
-	integer, allocatable, dimension(:,:) :: visited_grid
 
 	character(len=256) :: arg_in
 
@@ -55,7 +50,6 @@ program flowlines3
 
 	r_increment = grid_spacing * r_increment_minimum
 
-	closeness_threshold = r_increment / threshold_factor
 
 	! read polygons
 	call read_polygons_init()
@@ -70,7 +64,7 @@ program flowlines3
 	call read_direction_grid_init(number_x_grid,number_y_grid)
 	call read_direction_grid(number_x_grid,number_y_grid)
 
-	allocate(visited_grid(number_x_grid,number_y_grid))
+
 
 	! write GMT file for plotting/debugging
 
@@ -125,7 +119,7 @@ program flowlines3
 
 	close(unit=gmt_unit)
 
-	deallocate(visited_grid)
+
 
 	! clear memory
 	call read_polygons_clear()
@@ -220,7 +214,7 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 	logical, intent(out) :: hit_saddle, oscillating, outside
 
 	double precision :: grid_x(2), grid_y(2), distance, dx, dy, total_distance
-	integer :: x_grid_index, y_grid_index
+	integer :: x_grid_index, y_grid_index, x_grid_point, y_grid_point
 	logical :: return_status
 	double precision, dimension(2,2) :: corner_values, corner_values_x, corner_values_y
 
