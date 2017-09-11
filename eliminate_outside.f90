@@ -26,6 +26,8 @@ program eliminate_outside
 	open(unit=contour_unit, file = contour_file, access="sequential", form="formatted", status="old")
 	open(unit=out_unit, file =out_contour_file, access="sequential", form="formatted", status="replace")
 
+	write(out_unit,'(A)') ">"
+
 	read_file: do
 
 		read(contour_unit,*, iostat=istat) divider
@@ -68,6 +70,8 @@ program eliminate_outside
 
 		if(score == 1) THEN
 			write(out_unit,*) x, y, z
+		else
+			write(out_unit,'(A)') adjustl(trim(all_line))
 		endif
 
 	end do read_file

@@ -2,9 +2,9 @@ module read_minmax
 
 	implicit none
 
-	integer :: number_x_grid, number_y_grid
+	integer, save :: number_x_grid, number_y_grid
 
-	double precision :: min_x_grid, max_x_grid, min_y_grid, max_y_grid
+	double precision, save :: min_x_grid, max_x_grid, min_y_grid, max_y_grid
 
 
 ! used only after running find_direction
@@ -54,26 +54,57 @@ subroutine run_read_minmax(grid_spacing)
 end subroutine run_read_minmax
 
 
-subroutine find_grid_index(x, y, grid_spacing, x_grid_index, y_grid_index)
+subroutine find_grid_index(x, y, grid_spacing, x_grid_index, y_grid_index, return_status)
 	implicit none
 
 	double precision, intent(in) :: x, y, grid_spacing
 	integer, intent(out) :: x_grid_index, y_grid_index
+	logical, intent(out) :: return_status
 
 	x_grid_index = nint((x-min_x_grid) / grid_spacing)+1
 	y_grid_index = nint((y-min_y_grid) / grid_spacing)+1
 
+	return_status = .true.
+
 	if(x_grid_index < 1 .or. x_grid_index > number_x_grid) then
 		write(6,*) "warning: x-coordinate out of bounds"
-		stop
+		return_status = .false.
 	endif
 
 	if(y_grid_index < 1 .or. y_grid_index > number_y_grid) then
 		write(6,*) "warning: y-coordinate out of bounds"
-		stop
+		return_status = .false.
 	endif
 
 end subroutine find_grid_index
+
+
+
+subroutine find_grid_corner(x, y, grid_spacing, x_grid_index, y_grid_index, return_status)
+	! finds the index of the bottom left corner
+	implicit none
+
+	double precision, intent(in) :: x, y, grid_spacing
+	integer, intent(out) :: x_grid_index, y_grid_index
+	logical, intent(out) :: return_status
+
+
+	x_grid_index = int((x-min_x_grid) / grid_spacing)+1
+	y_grid_index = int((y-min_y_grid) / grid_spacing)+1
+
+	return_status = .true.
+
+	if(x_grid_index < 1 .or. x_grid_index > number_x_grid) then
+		write(6,*) "warning: x-coordinate out of bounds"
+		return_status = .false.
+	endif
+
+	if(y_grid_index < 1 .or. y_grid_index > number_y_grid) then
+		write(6,*) "warning: y-coordinate out of bounds"
+		return_status = .false.
+	endif
+
+end subroutine find_grid_corner
 
 
 subroutine find_grid_location(x_grid_index, y_grid_index, grid_spacing, x, y)

@@ -12,7 +12,7 @@ module read_polygons
 	implicit none
 
 	integer :: max_polygons
-	integer, parameter ::  max_points = 100000, step_unit = 20, param_unit=10
+	integer, parameter ::  max_points = 1000000, step_unit = 20, param_unit=10
 	integer, dimension(2) :: number_polygons
 	integer, dimension(:,:), allocatable :: polygon_points
 
@@ -49,7 +49,7 @@ subroutine read_polygons_init()
 	character (len=1), parameter :: divider_character = ">", ignore_character = "#"
 
 
-
+	call read_params()
 	max_polygons = max(number_polygons(1),number_polygons(2))
 	allocate(x_coordinates(2,max_polygons,max_points), y_coordinates(2,max_polygons,max_points), &
 		   polygon_points(2,max_polygons), stat=istat)
@@ -58,7 +58,8 @@ subroutine read_polygons_init()
 		stop
 	endif
 
-	call read_params()
+
+
 
 	polygon_points = 0
 	read_files: do counter = 1, 2, 1
@@ -76,8 +77,10 @@ subroutine read_polygons_init()
 
 			if(divider == divider_character) THEN
 				polygon_counter = polygon_counter + 1
+				polygon_points(counter,polygon_counter) = 0
 				cycle read_polygons
 			elseif (divider == ignore_character) THEN ! anything starting with '#' should be ignored
+					
 				cycle read_polygons
 			else
 				backspace(unit=step_unit)
@@ -86,6 +89,7 @@ subroutine read_polygons_init()
 				call check_array(polygon_points(counter,polygon_counter))
 
 				read(step_unit,*) x, y
+
 				if (polygon_points(counter,polygon_counter) > 1) THEN ! check if points need to be added
 
 					distance = sqrt(&
@@ -96,6 +100,8 @@ subroutine read_polygons_init()
 					! currently this just does linear interpolation, probably better in the future to do a spline
 
 						add_points = int(distance / fining_increment)
+
+
 
 						angle = atan2(&
 						 y - y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)-1), &
@@ -124,6 +130,7 @@ subroutine read_polygons_init()
 
 				x_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) = x
 				y_coordinates(counter,polygon_counter,polygon_points(counter,polygon_counter)) = y
+
 			endif
 
 		end do read_polygons
@@ -175,7 +182,7 @@ subroutine check_array(point_count)
 	if(point_count > max_points) THEN
 		write(6,*) "Number of points in polygon exceeds internal memory"
 		write(6,*) "If you want to proceed, you must increase max_points"
-		write(6,*) "and recompile"
+		write(6,*) "and recompile:", point_count, "> ", max_points
 		close(unit=step_unit)
 		stop
 	end if

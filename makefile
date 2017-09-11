@@ -36,25 +36,41 @@ boundary_mask_mod.o: boundary_mask_mod.f90
 spline.o: spline.f90
 	$(FC) -o spline.o -c  $(FCFLAGS) spline.f90
 
+crossover.o: crossover.f90
+	$(FC) -o crossover.o -c $(FCFLAGS) crossover.f90
+
+tin.o: tin.f90
+	$(FC) -o tin.o -c  $(FCFLAGS) tin.f90 
 
 # programs
+
+grid_direction_test: grid_direction_test.f90
+	$(FC) -o grid_direction_test  $(FCFLAGS) grid_direction_test.f90
 
 find_direction: find_direction.f90 point_in_polygon.o direction_mod.o read_polygons.o
 	$(FC) -o find_direction  $(FCFLAGS) find_direction.f90 point_in_polygon.o direction_mod.o read_polygons.o
 
 
+shrinking: shrinking.f90 read_polygons.o direction_mod.o point_in_polygon.o
+	$(FC) -o shrinking  $(FCFLAGS) shrinking.f90 read_polygons.o direction_mod.o point_in_polygon.o
 
 
-interpolate_direction: interpolate_direction.f90 point_in_polygon.o direction_mod.o read_minmax.o direction_grid_mod.o
+interpolate_direction: interpolate_direction.f90 point_in_polygon.o direction_mod.o read_minmax.o direction_grid_mod.o 
 	$(FC) -o interpolate_direction  $(FCFLAGS) interpolate_direction.f90 point_in_polygon.o direction_mod.o read_minmax.o direction_grid_mod.o
+
+flowline_direction: flowline_direction.f90 point_in_polygon.o direction_mod.o read_minmax.o crossover.o tin.o boundary_mask_mod.o read_polygons.o
+	$(FC) -o flowline_direction  $(FCFLAGS) flowline_direction.f90 point_in_polygon.o direction_mod.o read_minmax.o crossover.o tin.o boundary_mask_mod.o read_polygons.o
 
 boundary_mask: boundary_mask.f90 read_polygons.o read_minmax.o boundary_mask_mod.o
 	$(FC) -o boundary_mask  $(FCFLAGS) boundary_mask.f90 read_polygons.o read_minmax.o boundary_mask_mod.o
 
 
 
-flowlines: flowlines.f90 read_polygons.o read_minmax.o boundary_mask_mod.o direction_grid_mod.o
-	$(FC) -o flowlines  $(FCFLAGS) flowlines.f90 read_polygons.o read_minmax.o boundary_mask_mod.o direction_grid_mod.o direction_grid_mod.o
+flowlines: flowlines.f90 read_polygons.o read_minmax.o boundary_mask_mod.o direction_grid_mod.o crossover.o
+	$(FC) -o flowlines  $(FCFLAGS) flowlines.f90 read_polygons.o read_minmax.o boundary_mask_mod.o direction_grid_mod.o crossover.o
+
+flowlines3: flowlines3.f90 read_polygons.o read_minmax.o boundary_mask_mod.o direction_grid_mod.o crossover.o
+	$(FC) -o flowlines3  $(FCFLAGS) flowlines3.f90 read_polygons.o read_minmax.o boundary_mask_mod.o direction_grid_mod.o crossover.o
 
 contour_creation: contour_creation.f90 spline.o read_polygons.o
 	$(FC) -o contour_creation  $(FCFLAGS) contour_creation.f90 spline.o read_polygons.o

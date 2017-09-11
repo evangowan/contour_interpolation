@@ -33,7 +33,7 @@ program flowlines2
 	character(len=256), parameter :: gmt_file = "flowlines.txt", discard_file="discarded_flowlines.txt"
 
 
-	logical :: found_point, end_line, round_down_x, round_down_y, looping, hit_saddle, oscillating
+	logical :: found_point, end_line, round_down_x, round_down_y, looping, hit_saddle, oscillating, return_status, outside
 
 
 
@@ -97,13 +97,14 @@ program flowlines2
 			y_flowline_store(flowline_point_count) = y_coordinates(1,polygon_counter,points_counter)
 
 			call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
-			   grid_spacing, x_grid_index, y_grid_index)
+			   grid_spacing, x_grid_index, y_grid_index, return_status)
 
 			visited_grid = 0
 			last_x_index = x_grid_index
 			last_y_index = y_grid_index
 
 			oscillating = .false.
+			outside = .false.
 			flowline_loop: do
 				! find grid points
 				flowline_point_count = flowline_point_count + 1
@@ -141,8 +142,15 @@ program flowlines2
 				end if
 
 				call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
-				  grid_spacing, x_dummy_index, y_dummy_index) ! includes inside grid check
+				  grid_spacing, x_dummy_index, y_dummy_index, return_status) ! includes inside grid check
 
+
+				if(.not. return_status) THEN
+
+					outside =.true.
+					exit flowline_loop
+
+				endif
 
 				! check to see if the line crosses over the boundary
 
@@ -158,8 +166,8 @@ program flowlines2
 				endif
 
 				if(end_line) then
-					write(549,*) "> ", points_counter, x_flowline_store(flowline_point_count), &
-					  y_flowline_store(flowline_point_count)
+!					write(549,*) "> ", points_counter, x_flowline_store(flowline_point_count), &
+!					  y_flowline_store(flowline_point_count)
 					exit flowline_loop
 				endif
 
@@ -176,8 +184,9 @@ program flowlines2
 
 				if(looping) then
 
-					write(549,*) ">>", points_counter, x_flowline_store(flowline_point_count), &
-					  y_flowline_store(flowline_point_count)
+!					write(549,*) ">>", points_counter, x_flowline_store(flowline_point_count), &
+!					  y_flowline_store(flowline_point_count)
+					write(6,*) "detected looping"
 					exit flowline_loop
 				endif
 
@@ -193,10 +202,10 @@ program flowlines2
 				endif
 
 				if(hit_saddle) then
-
-					write(549,*) ">>>", points_counter, x_flowline_store(flowline_point_count), &
-					  y_flowline_store(flowline_point_count), x_flowline_store(flowline_point_count-2), &
-					  y_flowline_store(flowline_point_count-2)
+					write(6,*) "detected a saddle point"
+!					write(549,*) ">>>", points_counter, x_flowline_store(flowline_point_count), &
+!					  y_flowline_store(flowline_point_count), x_flowline_store(flowline_point_count-2), &
+!					  y_flowline_store(flowline_point_count-2)
 					exit flowline_loop
 				endif
 
@@ -216,12 +225,12 @@ program flowlines2
 
 			end do flowline_loop
 
-			if(.not. looping .and. .not. hit_saddle) THEN
+!			if( .not. hit_saddle) THEN
 				if(flowline_point_count > max_point) THEN
 					max_point = flowline_point_count
 					max_line = points_counter
 				endif
-				if (oscillating) THEN
+				if (oscillating .or. outside .or. looping .or. hit_saddle) THEN
 				!	write(gmt_unit,'(A1,I7,I7)') divider_character, points_counter, 0
 					write(discard_unit,'(A1,I7,I7)') divider_character, points_counter, flowline_point_count
 				else
@@ -229,14 +238,14 @@ program flowlines2
 				endif
 
 				do flow_counter = 1, flowline_point_count, 1
-					if(oscillating) THEN
+					if(oscillating .or. outside .or. looping .or. hit_saddle) THEN
 						write(discard_unit,*) x_flowline_store(flow_counter), y_flowline_store(flow_counter)
 					else
 						write(gmt_unit,*) x_flowline_store(flow_counter), y_flowline_store(flow_counter)
 					endif
 
 				end do
-			endif
+!			endif
 
 
 !			end do
