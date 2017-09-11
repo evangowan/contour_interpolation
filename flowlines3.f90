@@ -12,7 +12,6 @@ program flowlines3
 
 	integer :: commandline_count, polygon_counter, points_counter
 	integer ::  index_next, extra_counter, extra_total, flowline_point_count
-	integer :: max_line, max_point
 	integer, parameter :: gmt_unit = 90, max_flowline_points = 100000, discard_unit=200
 
 
@@ -70,8 +69,6 @@ program flowlines3
 
 	open(unit=gmt_unit, file=gmt_file, access="sequential", form="formatted", status="replace")
 
-	max_line = 0 
-	max_point = 0
 
 	open(unit=discard_unit, file=discard_file, access="sequential", form="formatted", status="replace")
 
@@ -98,14 +95,6 @@ program flowlines3
 			call flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_spacing, r_increment,&
 	                   oscillating,hit_saddle,outside,flowline_point_count)
 
-
-
-			if(flowline_point_count > max_point) THEN
-				max_point = flowline_point_count
-				max_line = points_counter
-			endif
-
-
 			call write_flowline(x_flowline_store,y_flowline_store,distance_store,flowline_point_count,gmt_unit,&
 				  discard_unit,hit_saddle, oscillating, outside)
 			
@@ -115,7 +104,7 @@ program flowlines3
 
 	end do
 
-	write(6,*) max_line, max_point
+
 
 	close(unit=gmt_unit)
 
