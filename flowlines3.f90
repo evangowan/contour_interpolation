@@ -6,11 +6,11 @@ program flowlines3
 	use read_minmax
 	use boundary_mask_mod
 	use direction_grid_mod
-	use crossover
+
 
 	implicit none
 
-	integer :: commandline_count, polygon_counter, points_counter, x_grid_index, y_grid_index, x_grid_point, y_grid_point
+	integer :: commandline_count, polygon_counter, points_counter,  x_grid_point, y_grid_point
 	integer :: check_peak, x_increment, y_increment, index_next, extra_counter, extra_total, flowline_point_count, flow_counter
 	integer :: max_line, max_point, coarse_counter
 	integer, parameter :: gmt_unit = 90, max_flowline_points = 100000, discard_unit=200
@@ -19,15 +19,15 @@ program flowlines3
 
 	double precision, dimension(coarse_factor) :: coarse_x, coarse_y
 
-	double precision :: grid_spacing, current_x, current_y, current_direction, next_x, next_y, grid_x(2), grid_y(2), temp_x, temp_y
+	double precision :: grid_spacing, current_x, current_y, current_direction, next_x, next_y,  temp_x, temp_y
 	double precision :: x1, y1, z1, x2, y2, z2, x, y
 	
-	double precision :: crossover_x, crossover_y, angle, closeness_threshold, r_increment, dx, dy, distance, total_distance
-	double precision, parameter :: r_increment_minimum = 0.1, threshold_factor = 100., increment_minimum = 10e-5
+	double precision :: crossover_x, crossover_y, angle, closeness_threshold, r_increment,  total_distance
+	double precision, parameter :: r_increment_minimum = 0.1, threshold_factor = 100.
 
 	double precision, dimension(max_flowline_points) :: x_flowline_store, y_flowline_store, distance_store
 
-	double precision, dimension(2,2) :: corner_values, corner_values_x, corner_values_y
+
 
 	double precision, parameter :: pi = 3.141592653589793, to_round_down = 0.00001
 
@@ -96,124 +96,18 @@ program flowlines3
 			endif
 
 
-			total_distance = 0.
+
 
 			flowline_point_count = 1
 
 			x_flowline_store(flowline_point_count) = x_coordinates(1,polygon_counter,points_counter) 
 			y_flowline_store(flowline_point_count) = y_coordinates(1,polygon_counter,points_counter)
 
+			call flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_spacing, r_increment,&
+	                   oscillating,hit_saddle,outside,flowline_point_count)
 
 
-			oscillating = .false.
-			hit_saddle = .false.
-			outside = .false.
-
-			flowline_loop: do
-				! find grid points
-
-				call find_grid_corner(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
-				   grid_spacing, x_grid_index, y_grid_index, return_status)
-
-
-
-				call find_grid_location(x_grid_index, y_grid_index, grid_spacing, grid_x(1), grid_y(1))
-
-				grid_x(2) = grid_x(1) + grid_spacing
-				grid_y(2) = grid_y(1) + grid_spacing
-
-
-				corner_values(1,1) = direction_grid(x_grid_index, y_grid_index)
-				corner_values(2,1) = direction_grid(x_grid_index+1, y_grid_index)
-				corner_values(2,2) = direction_grid(x_grid_index+1, y_grid_index+1)
-				corner_values(1,2) = direction_grid(x_grid_index, y_grid_index+1)
-
-				corner_values_x = cos(corner_values)
-				corner_values_y = sin(corner_values)
-				
-
-				dx = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
-					grid_x,grid_y,corner_values_x)
-				dy = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
-					grid_x,grid_y,corner_values_y)
-
-!				write(555,*) ">"
-!				write(555,*) grid_x(1), grid_y(1), grid_x(1)+corner_values_x(1,1), grid_y(1)+corner_values_y(1,1)
-!				write(555,*) grid_x(2), grid_y(1), grid_x(2)+corner_values_x(2,1), grid_y(1)+corner_values_y(2,1)
-!				write(555,*) grid_x(2), grid_y(2), grid_x(2)+corner_values_x(2,2), grid_y(2)+corner_values_y(2,2)
-!				write(555,*) grid_x(1), grid_y(2), grid_x(1)+corner_values_x(1,2), grid_y(2)+corner_values_y(1,2)
-!				write(555,*) grid_x(1), grid_y(1), grid_x(1)+corner_values_x(1,1), grid_y(1)+corner_values_y(1,1)
-!				write(555,*) ">>"
-!				write(555,*) x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
-!					x_flowline_store(flowline_point_count)+dx,y_flowline_store(flowline_point_count)+dy
-
-				distance = sqrt(dx**2 + dy**2)
-
-
-
-				if(distance < increment_minimum) THEN
-					! likely hit a discontinuity in the field
-					write(6,*) "hit discontinuity"
-					hit_saddle = .true.
-					exit flowline_loop
-				endif
-
-				flowline_point_count = flowline_point_count + 1
-
-				if(flowline_point_count > max_flowline_points) THEN
-					write(6,*) "possibly oscillating"
-					oscillating = .true.
-					exit flowline_loop
-				endif
-
-				x_flowline_store(flowline_point_count) = x_flowline_store(flowline_point_count-1) +&
-				  r_increment * dx
-				y_flowline_store(flowline_point_count) = y_flowline_store(flowline_point_count-1) +&
-				  r_increment * dy
-
-
-
-
-				if(.not. return_status) THEN
-
-					outside =.true.
-					exit flowline_loop
-
-				endif
-
-				! check to see if the line crosses over the boundary
-
-				end_line = .false.
-
-
-				call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
-				   grid_spacing, x_grid_point, y_grid_point, return_status)
-
-				if(mask(2,x_grid_point, y_grid_point) == 1 ) THEN
-					call cross_polygon(x_flowline_store(flowline_point_count-1), &
-					  y_flowline_store(flowline_point_count-1), x_flowline_store(flowline_point_count), &
-					  y_flowline_store(flowline_point_count), end_line, grid_spacing)
-
-				endif
-
-
-				total_distance = total_distance + sqrt((x_flowline_store(flowline_point_count)-&
-				  x_flowline_store(flowline_point_count-1))**2 + (y_flowline_store(flowline_point_count)&
-				  -y_flowline_store(flowline_point_count-1))**2)
-
-				distance_store(flowline_point_count) = total_distance
-
-		!		write(6,*) x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count)
-
-
-
-
-				if(end_line) then
-					exit flowline_loop
-				endif
-
-
-			end do flowline_loop
+			total_distance = distance_store(flowline_point_count)
 
 
 			if(flowline_point_count > max_point) THEN
@@ -228,7 +122,7 @@ program flowlines3
 			endif
 
 			! reduce the amount of points
-!	write(6,*) oscillating, outside, hit_saddle
+
 			if(flowline_point_count > 1) THEN
 				coarse_counter = 1
 				coarse_x(coarse_counter) = x_flowline_store(1)
@@ -378,5 +272,134 @@ subroutine interpolate_between_points(x1, y1, z1, x2, y2, z2, x_out, y_out, z_ex
 
 
 end subroutine interpolate_between_points
+
+
+
+subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_spacing, r_increment,&
+	                   oscillating,hit_saddle,outside,flowline_point_count)
+
+	use direction_grid_mod
+	use boundary_mask_mod
+	use crossover
+
+	implicit none
+	integer, parameter :: max_flowline_points = 100000
+	double precision, intent(in) :: grid_spacing, r_increment
+	integer, intent(out) :: flowline_point_count
+	double precision, dimension(max_flowline_points), intent(inout) :: x_flowline_store, y_flowline_store
+	double precision, dimension(max_flowline_points), intent(out) :: distance_store
+	logical, intent(out) :: hit_saddle, oscillating, outside
+
+	double precision :: grid_x(2), grid_y(2), distance, dx, dy
+	integer :: x_grid_index, y_grid_index
+	logical :: return_status
+	double precision, dimension(2,2) :: corner_values, corner_values_x, corner_values_y
+
+	double precision, parameter :: increment_minimum = 10e-5
+
+	total_distance = 0.
+	flowline_point_count = 1
+
+	oscillating = .false.
+	hit_saddle = .false.
+	outside = .false.
+
+	loop: do
+		! find grid points
+
+		call find_grid_corner(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
+		   grid_spacing, x_grid_index, y_grid_index, return_status)
+
+
+
+		call find_grid_location(x_grid_index, y_grid_index, grid_spacing, grid_x(1), grid_y(1))
+
+		grid_x(2) = grid_x(1) + grid_spacing
+		grid_y(2) = grid_y(1) + grid_spacing
+
+
+		corner_values(1,1) = direction_grid(x_grid_index, y_grid_index)
+		corner_values(2,1) = direction_grid(x_grid_index+1, y_grid_index)
+		corner_values(2,2) = direction_grid(x_grid_index+1, y_grid_index+1)
+		corner_values(1,2) = direction_grid(x_grid_index, y_grid_index+1)
+
+		corner_values_x = cos(corner_values)
+		corner_values_y = sin(corner_values)
+		
+
+		dx = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+			grid_x,grid_y,corner_values_x)
+		dy = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+			grid_x,grid_y,corner_values_y)
+
+		distance = sqrt(dx**2 + dy**2)
+
+
+
+		if(distance < increment_minimum) THEN
+			! likely hit a discontinuity in the field
+			write(6,*) "hit discontinuity"
+			hit_saddle = .true.
+			exit loop
+		endif
+
+		flowline_point_count = flowline_point_count + 1
+
+		if(flowline_point_count > max_flowline_points) THEN
+			write(6,*) "possibly oscillating"
+			oscillating = .true.
+			exit loop
+		endif
+
+		x_flowline_store(flowline_point_count) = x_flowline_store(flowline_point_count-1) +&
+		  r_increment * dx
+		y_flowline_store(flowline_point_count) = y_flowline_store(flowline_point_count-1) +&
+		  r_increment * dy
+
+
+
+
+		if(.not. return_status) THEN
+
+			outside =.true.
+			exit loop
+
+		endif
+
+		! check to see if the line crosses over the boundary
+
+		end_line = .false.
+
+
+		call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
+		   grid_spacing, x_grid_point, y_grid_point, return_status)
+
+		if(mask(2,x_grid_point, y_grid_point) == 1 ) THEN
+			call cross_polygon(x_flowline_store(flowline_point_count-1), &
+			  y_flowline_store(flowline_point_count-1), x_flowline_store(flowline_point_count), &
+			  y_flowline_store(flowline_point_count), end_line, grid_spacing)
+
+		endif
+
+
+		total_distance = total_distance + sqrt((x_flowline_store(flowline_point_count)-&
+		  x_flowline_store(flowline_point_count-1))**2 + (y_flowline_store(flowline_point_count)&
+		  -y_flowline_store(flowline_point_count-1))**2)
+
+		distance_store(flowline_point_count) = total_distance
+
+
+		if(end_line) then
+			exit loop
+		endif
+
+
+	end do loop
+
+
+
+end subroutine flowline_loop
+
+
 
 end program flowlines3
