@@ -11,18 +11,16 @@ program flowlines3
 	implicit none
 
 	integer :: commandline_count, polygon_counter, points_counter,  x_grid_point, y_grid_point
-	integer :: check_peak, x_increment, y_increment, index_next, extra_counter, extra_total, flowline_point_count, flow_counter
-	integer :: max_line, max_point, coarse_counter
+	integer :: check_peak, x_increment, y_increment, index_next, extra_counter, extra_total, flowline_point_count
+	integer :: max_line, max_point
 	integer, parameter :: gmt_unit = 90, max_flowline_points = 100000, discard_unit=200
 
-	integer, parameter :: coarse_factor = 21 ! every 0.05 units
 
-	double precision, dimension(coarse_factor) :: coarse_x, coarse_y
 
 	double precision :: grid_spacing, current_x, current_y, current_direction, next_x, next_y,  temp_x, temp_y
-	double precision :: x1, y1, z1, x2, y2, z2, x, y
+
 	
-	double precision :: crossover_x, crossover_y, angle, closeness_threshold, r_increment,  total_distance
+	double precision :: crossover_x, crossover_y, angle, closeness_threshold, r_increment
 	double precision, parameter :: r_increment_minimum = 0.1, threshold_factor = 100.
 
 	double precision, dimension(max_flowline_points) :: x_flowline_store, y_flowline_store, distance_store
@@ -35,7 +33,7 @@ program flowlines3
 	integer, allocatable, dimension(:,:) :: visited_grid
 
 	character(len=256) :: arg_in
-	character (len=1), parameter :: divider_character = ">"
+
 	character(len=256), parameter :: gmt_file = "flowlines.txt", discard_file="discarded_flowlines.txt"
 
 
@@ -107,87 +105,18 @@ program flowlines3
 	                   oscillating,hit_saddle,outside,flowline_point_count)
 
 
-			total_distance = distance_store(flowline_point_count)
-
 
 			if(flowline_point_count > max_point) THEN
 				max_point = flowline_point_count
 				max_line = points_counter
 			endif
-			if (oscillating .or. outside  .or. hit_saddle) THEN
-			!	write(gmt_unit,'(A1,I7,I7)') divider_character, points_counter, 0
-				write(discard_unit,'(A1,I7,I7)') divider_character, points_counter, flowline_point_count
-			else
-				write(gmt_unit,'(A1,I7,I7)') divider_character, points_counter, flowline_point_count
-			endif
 
-			! reduce the amount of points
 
-			if(flowline_point_count > 1) THEN
-				coarse_counter = 1
-				coarse_x(coarse_counter) = x_flowline_store(1)
-				coarse_y(coarse_counter) = y_flowline_store(1)
+			call write_flowline(x_flowline_store,y_flowline_store,distance_store,flowline_point_count,gmt_unit,&
+				  discard_unit,hit_saddle, oscillating, outside)
 			
-				distance_store = distance_store / total_distance * dble(coarse_factor-1) ! normallizes the distance, then puts it into fractions that can be used for finding the points
-
-				flow_counter = 2
-				do while (flow_counter < flowline_point_count)
-			
-					if(int(distance_store(flow_counter)) >= coarse_counter) THEN ! add point
 
 
-						x1 = x_flowline_store(flow_counter-1)
-						y1 = y_flowline_store(flow_counter-1)
-						z1 = distance_store(flow_counter-1)
-
-						x2 = x_flowline_store(flow_counter)
-						y2 = y_flowline_store(flow_counter)
-						z2 = distance_store(flow_counter)
-
-						call interpolate_between_points(x1, y1, z1, x2, y2, z2, x, y, dble(coarse_counter), return_status)
-
-						if(.not. return_status) THEN
-							write(6,*) "possible error in the code"
-							write(6,*) x1, y1, z1
-							write(6,*) x2, y2, z2
-							write(6,*) coarse_counter
-						endif
-
-						coarse_counter = coarse_counter + 1
-						coarse_x(coarse_counter) = x
-						coarse_y(coarse_counter) = y
-
-					else
-
-						flow_counter = flow_counter + 1
-
-					endif
-
-					
-
-				end do
-
-				coarse_counter = coarse_factor
-				coarse_x(coarse_counter) = x_flowline_store(flowline_point_count)
-				coarse_y(coarse_counter) = y_flowline_store(flowline_point_count)
-
-				do coarse_counter = 1, coarse_factor, 1
-!				write(6,*) ">", coarse_x(coarse_counter), coarse_y(coarse_counter)
-				!	write(6,*) oscillating, outside, hit_saddle
-					if(oscillating .or. outside .or. hit_saddle) THEN
-!	write(6,*) points_counter, oscillating, outside, hit_saddle
-						write(discard_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
-					else
-
-						write(gmt_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
-					endif
-
-				end do
-
-			else
-			 	write(discard_unit,*) x_flowline_store(1), y_flowline_store(1)
-			endif
-	write(6,*) oscillating, outside, hit_saddle
 		end do
 
 	end do
@@ -290,7 +219,7 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 	double precision, dimension(max_flowline_points), intent(out) :: distance_store
 	logical, intent(out) :: hit_saddle, oscillating, outside
 
-	double precision :: grid_x(2), grid_y(2), distance, dx, dy
+	double precision :: grid_x(2), grid_y(2), distance, dx, dy, total_distance
 	integer :: x_grid_index, y_grid_index
 	logical :: return_status
 	double precision, dimension(2,2) :: corner_values, corner_values_x, corner_values_y
@@ -400,6 +329,109 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 
 end subroutine flowline_loop
 
+
+
+subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowline_point_count,gmt_unit,&
+				  discard_unit,hit_saddle, oscillating, outside)
+
+	implicit none
+
+
+	integer, parameter :: max_flowline_points = 100000
+	double precision, dimension(max_flowline_points), intent(in) :: x_flowline_store, y_flowline_store,distance_store
+	integer, intent(in) :: flowline_point_count,gmt_unit,discard_unit
+	logical, intent(in) :: hit_saddle, oscillating, outside
+
+	double precision, dimension(max_flowline_points) :: distance_store_normalized
+
+	integer :: coarse_counter, flow_counter
+	integer, parameter :: coarse_factor = 21 ! every 0.05 units
+
+	double precision :: total_distance
+	double precision :: x1, y1, z1, x2, y2, z2, x, y
+	double precision, dimension(coarse_factor) :: coarse_x, coarse_y
+	character (len=1), parameter :: divider_character = ">"
+
+	logical :: 	return_status
+
+	if (oscillating .or. outside  .or. hit_saddle) THEN
+
+		write(discard_unit,'(A1,I7,I7)') divider_character
+	else
+		write(gmt_unit,'(A1,I7,I7)') divider_character
+	endif
+
+	! reduce the amount of points
+
+	total_distance = distance_store(flowline_point_count)
+
+	if(flowline_point_count > 1) THEN
+		coarse_counter = 1
+		coarse_x(coarse_counter) = x_flowline_store(1)
+		coarse_y(coarse_counter) = y_flowline_store(1)
+	
+		distance_store_normalized = distance_store / total_distance * dble(coarse_factor-1) ! normalizes the distance, then puts it into fractions that can be used for finding the points
+
+		flow_counter = 2
+		do while (flow_counter < flowline_point_count)
+	
+			if(int(distance_store_normalized(flow_counter)) >= coarse_counter) THEN ! add point
+
+
+				x1 = x_flowline_store(flow_counter-1)
+				y1 = y_flowline_store(flow_counter-1)
+				z1 = distance_store_normalized(flow_counter-1)
+
+				x2 = x_flowline_store(flow_counter)
+				y2 = y_flowline_store(flow_counter)
+				z2 = distance_store_normalized(flow_counter)
+
+
+				call interpolate_between_points(x1, y1, z1, x2, y2, z2, x, y, dble(coarse_counter), return_status)
+
+				if(.not. return_status) THEN
+					write(6,*) "possible error in the code"
+					write(6,*) x1, y1, z1
+					write(6,*) x2, y2, z2
+					write(6,*) coarse_counter
+				endif
+
+				coarse_counter = coarse_counter + 1
+				coarse_x(coarse_counter) = x
+				coarse_y(coarse_counter) = y
+
+			else
+	!			write(gmt_unit,*) x_flowline_store(flow_counter),y_flowline_store(flow_counter)
+
+				flow_counter = flow_counter + 1
+
+			endif
+
+			
+
+		end do
+
+		coarse_counter = coarse_factor
+		coarse_x(coarse_counter) = x_flowline_store(flowline_point_count)
+		coarse_y(coarse_counter) = y_flowline_store(flowline_point_count)
+
+		do coarse_counter = 1, coarse_factor, 1
+
+			if(oscillating .or. outside .or. hit_saddle) THEN
+				write(discard_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
+			else
+
+				write(gmt_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
+			endif
+
+		end do
+
+	else
+	 	write(discard_unit,*) x_flowline_store(1), y_flowline_store(1)
+	endif
+
+
+end subroutine write_flowline
 
 
 end program flowlines3
