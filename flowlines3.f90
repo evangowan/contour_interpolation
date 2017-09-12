@@ -67,7 +67,7 @@ program flowlines3
 
 	r_increment = grid_spacing * r_increment_minimum
 
-
+ 
 	! read polygons
 	call read_polygons_init()
 	! read grid parameters
@@ -112,11 +112,19 @@ program flowlines3
 
 			call flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_spacing, r_increment,&
 	                   oscillating,hit_saddle,outside,flowline_point_count,reverse, polygon_compare)
+			write(668,*) ">>", flowline_point_count
+			do dummy_counter = 1, flowline_point_count
+			write(668,*) x_flowline_store(dummy_counter), y_flowline_store(dummy_counter), distance_store(flowline_point_count),&
+				distance_store(dummy_counter)
+			end do
 
+			if(flowline_point_count > 2) THEN
 
-
-			call write_flowline(x_flowline_store,y_flowline_store,distance_store,flowline_point_count,gmt_unit,&
+				call write_flowline(x_flowline_store,y_flowline_store,distance_store,flowline_point_count,gmt_unit,&
 				  discard_unit,hit_saddle, oscillating, outside,reverse)
+			else
+				write(6,*) "did not proceed far enough"
+			endif
 			
 
 
@@ -178,6 +186,7 @@ subroutine interpolate_between_points(x1, y1, z1, x2, y2, z2, x_out, y_out, z_ex
 		return_status = .false.
 	endif
 
+!	write(667,*) "intermediate_fraction:", intermediate_fraction
 
 	if(x1 == x2) THEN ! straight up-down line
 		x_out = x1
@@ -191,10 +200,19 @@ subroutine interpolate_between_points(x1, y1, z1, x2, y2, z2, x_out, y_out, z_ex
 
 		dx = x2-x1
 		dy = y2-y1
-		distance = z2 - z1
+		distance = sqrt(dx**2+dy**2)
 		angle = atan2(dy,dx)
+
+
 		x_out = x1 + distance * intermediate_fraction * cos(angle)
 		y_out = y1 + distance * intermediate_fraction * sin(angle)	
+
+!		write(667,*) "dx:", dx
+!		write(667,*) "dy:", dy
+!		write(667,*) "distance:", distance
+!		write(667,*) "angle:", angle
+!		write(667,*) "x_distance", distance * intermediate_fraction * cos(angle)
+!		write(667,*) "y_distance", distance * intermediate_fraction * sin(angle)	
 	endif	
 
 !	write(6,*) ">"
@@ -256,7 +274,7 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 	endif
 
 	previous_mask = 0
-
+	write(668,*) ">"
 	loop: do
 		! find grid points
 
@@ -291,30 +309,31 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 		call find_grid_location(dummy_x_grid_index, dummy_y_grid_index, grid_spacing, dummy_x, dummy_y)
 
 
-		if(dummy_x_grid_index /= x_index_check .or. dummy_y_grid_index /= y_index_check) THEN
+!		if(dummy_x_grid_index /= x_index_check .or. dummy_y_grid_index /= y_index_check) THEN
+		if(x_grid_index /= x_index_check .or. y_grid_index /= y_index_check) THEN
 		write(666,*) ">"
-!		write(666,*) grid_x(1), grid_y(1)
-!		write(666,*) grid_x(2), grid_y(1)
-!		write(666,*) grid_x(2), grid_y(2)
-!		write(666,*) grid_x(1), grid_y(2)
-!		write(666,*) grid_x(1), grid_y(1)
+		write(666,*) grid_x(1), grid_y(1)
+		write(666,*) grid_x(2), grid_y(1)
+		write(666,*) grid_x(2), grid_y(2)
+		write(666,*) grid_x(1), grid_y(2)
+		write(666,*) grid_x(1), grid_y(1)
 
-		write(666,*) dummy_x-grid_spacing/2., dummy_y-grid_spacing/2.
-		write(666,*) dummy_x+grid_spacing/2., dummy_y-grid_spacing/2.
-		write(666,*) dummy_x+grid_spacing/2., dummy_y+grid_spacing/2.
-		write(666,*) dummy_x-grid_spacing/2., dummy_y+grid_spacing/2.
-		write(666,*) dummy_x-grid_spacing/2., dummy_y-grid_spacing/2.
+!		write(666,*) dummy_x-grid_spacing/2., dummy_y-grid_spacing/2.
+!		write(666,*) dummy_x+grid_spacing/2., dummy_y-grid_spacing/2.
+!		write(666,*) dummy_x+grid_spacing/2., dummy_y+grid_spacing/2.
+!		write(666,*) dummy_x-grid_spacing/2., dummy_y+grid_spacing/2.
+!		write(666,*) dummy_x-grid_spacing/2., dummy_y-grid_spacing/2.
 
-!		write(666,*) ">>"
-!		write(666,*) grid_x(1), grid_y(1), grid_x(2), grid_y(1), grid_x(2), grid_y(2), grid_x(1), grid_y(2)
-!		write(666,*) grid_x(1)+corner_values_x(1,1), grid_y(1)+corner_values_y(1,1), grid_x(2)+corner_values_x(2,1),&
-!		 grid_y(1)+corner_values_y(2,1), grid_x(2)+corner_values_x(2,2), grid_y(2)+corner_values_y(2,2), &
-!		 grid_x(1)+corner_values_x(1,2), grid_y(2)+corner_values_y(1,2)
+		write(666,*) ">>"
+		write(666,*) grid_x(1), grid_y(1), grid_x(2), grid_y(1), grid_x(2), grid_y(2), grid_x(1), grid_y(2)
+		write(666,*) grid_x(1)+corner_values_x(1,1), grid_y(1)+corner_values_y(1,1), grid_x(2)+corner_values_x(2,1),&
+		 grid_y(1)+corner_values_y(2,1), grid_x(2)+corner_values_x(2,2), grid_y(2)+corner_values_y(2,2), &
+		 grid_x(1)+corner_values_x(1,2), grid_y(2)+corner_values_y(1,2)
 		write(666,*) ">>>"
-!			x_index_check = x_grid_index
-!			y_index_check = y_grid_index
-			x_index_check = dummy_x_grid_index
-			y_index_check = dummy_y_grid_index
+			x_index_check = x_grid_index
+			y_index_check = y_grid_index
+!			x_index_check = dummy_x_grid_index
+!			y_index_check = dummy_y_grid_index
 		endif
 
 
@@ -363,12 +382,7 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 
 
 
-		if(.not. return_status) THEN
 
-			outside =.true.
-			exit loop
-
-		endif
 
 		! check to see if the line crosses over the boundary
 
@@ -384,19 +398,43 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 			  y_flowline_store(flowline_point_count), end_line, grid_spacing,polygon_compare)
 
 		endif
-
+ 
 
 
 		write(666,*) x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
 			mask(polygon_compare,x_grid_point, y_grid_point)
 
 
+
+
 		total_distance = total_distance + sqrt((x_flowline_store(flowline_point_count)-&
 		  x_flowline_store(flowline_point_count-1))**2 + (y_flowline_store(flowline_point_count)&
 		  -y_flowline_store(flowline_point_count-1))**2)
 
+
+
 		distance_store(flowline_point_count) = total_distance
+		write(668,*) x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count), total_distance,&
+			distance_store(flowline_point_count), flowline_point_count
+
 		previous_mask = mask(polygon_compare,x_grid_point, y_grid_point)
+
+
+		if(.not. return_status .or. (mask(1,x_grid_point, y_grid_point) == 0 .and. mask(2,x_grid_point, y_grid_point) == 0)) THEN
+
+			outside =.true.
+			exit loop
+
+		endif
+
+
+		if(mask(1,x_grid_point, y_grid_point) == 2 .and. mask(2,x_grid_point, y_grid_point) == 2) THEN
+			! inside both
+			outside =.true.
+			exit loop
+
+		endif
+
 
 		if(end_line) then
 			exit loop
@@ -432,7 +470,7 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 	double precision, dimension(coarse_factor) :: coarse_x, coarse_y
 	character (len=1), parameter :: divider_character = ">"
 
-	logical :: 	return_status
+	logical :: 	return_status, kill
 
 !	if (oscillating .or. outside  .or. hit_saddle) THEN
 	if (oscillating .or. outside ) THEN
@@ -440,10 +478,11 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 	else
 		write(gmt_unit,'(A1)') divider_character
 	endif
-
+	kill = .false.
 	! reduce the amount of points
+	open(unit=667,file="test_flowline_error.txt",status="replace")
 
-	write(6,*) "flowline_point_count: ", flowline_point_count
+	write(667,*) "flowline_point_count: ", flowline_point_count
 
 	total_distance = distance_store(flowline_point_count)
 
@@ -453,10 +492,38 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 		coarse_y(coarse_counter) = y_flowline_store(1)
 	
 		distance_store_normalized = distance_store / total_distance * dble(coarse_factor-1) ! normalizes the distance, then puts it into fractions that can be used for finding the points
+		write(667,*) ">>>>>"
+		write(667,*) ">>>>>"
+		write(667,*) x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+					 distance_store(flowline_point_count),&
+		 distance_store_normalized(flowline_point_count)
+
+		write(667,*) ">>>>>"
+		if(int(distance_store_normalized(flowline_point_count)) > 20) THEN
+			write(6,*) "normalization failed"
+			write(6,*) distance_store_normalized(flowline_point_count)
+			write(6,*) distance_store(flowline_point_count)
+			write(6,*) total_distance
+			write(6,*) dble(coarse_factor-1)
+			stop
+		endif
+
+		write(667,*) x_flowline_store(1),y_flowline_store(1), distance_store_normalized(1)
+
+		write(667,*) ">"
+		do flow_counter = 1, flowline_point_count
+			write(667,*) flow_counter, x_flowline_store(flow_counter),y_flowline_store(flow_counter),&
+					 distance_store(flow_counter),&
+		 distance_store_normalized(flow_counter)
+		end do
+		write(667,*) ">"
 
 		flow_counter = 2
-		do while (flow_counter < flowline_point_count)
-	
+		do while (flow_counter <= flowline_point_count)
+			write(667,*) flow_counter, distance_store_normalized(flow_counter-1), coarse_counter,&
+				distance_store_normalized(flow_counter)
+!			write(667,*) ">>",flow_counter, distance_store_normalized(flow_counter),&
+!				int(distance_store_normalized(flow_counter)), coarse_counter
 			if(int(distance_store_normalized(flow_counter)) >= coarse_counter) THEN ! add point
 
 
@@ -469,7 +536,14 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 				z2 = distance_store_normalized(flow_counter)
 
 
+
 				call interpolate_between_points(x1, y1, z1, x2, y2, z2, x, y, dble(coarse_counter), return_status)
+
+!				write(667,*) ">>>", x1, y1, z1
+!				write(667,*) ">>>", x, y,  dble(coarse_counter)
+!				write(667,*) ">>>", x2, y2, z2
+!				write(667,*) "stored_distance:", z2 - z1
+!				write(667,*) "actual_distance:", sqrt((x2-x1)**2+(y2-y1)**2)/ total_distance * dble(coarse_factor-1)
 
 				if(.not. return_status) THEN
 					write(6,*) "possible error in the code"
@@ -479,11 +553,21 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 				endif
 
 				coarse_counter = coarse_counter + 1
+
+				if(coarse_counter > 21) THEN
+
+					write(667,*) x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count), &
+					  distance_store_normalized(flowline_point_count)
+					stop
+				endif
+
 				coarse_x(coarse_counter) = x
 				coarse_y(coarse_counter) = y
 
+			!	write(667,*) ">", coarse_counter, coarse_x(coarse_counter), coarse_y(coarse_counter)
+
 			else
-			!	write(6,*) x_flowline_store(flow_counter),y_flowline_store(flow_counter)
+!				write(667,*) x_flowline_store(flow_counter),y_flowline_store(flow_counter), distance_store_normalized(flow_counter)
 
 				flow_counter = flow_counter + 1
 
@@ -497,27 +581,41 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 		coarse_x(coarse_counter) = x_flowline_store(flowline_point_count)
 		coarse_y(coarse_counter) = y_flowline_store(flowline_point_count)
 
+		write(667,*) x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count), &
+		  distance_store_normalized(flowline_point_count)
+
+		write(667,*) ">>"
+
 		if(reverse) THEN
 			do coarse_counter = coarse_factor, 1, -1
+				if(coarse_y(coarse_counter) < 40.) THEN
+					kill = .true.
+				endif
 
+				write(667,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
 !				if(oscillating .or. outside .or. hit_saddle) THEN
 				if(oscillating .or. outside) THEN
 					write(discard_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
 				else
 
-					write(gmt_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
+					write(gmt_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter), &
+						1-(coarse_counter-1) / (coarse_factor-1)
 				endif
 
 			end do
 
 		else
 			do coarse_counter = 1, coarse_factor, 1
+				if(coarse_y(coarse_counter) < 40.) THEN
+					kill = .true.
+				endif
+				write(667,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
 !				if(oscillating .or. outside .or. hit_saddle) THEN
 				if(oscillating .or. outside) THEN
 					write(discard_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
 				else
 
-					write(gmt_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
+					write(gmt_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter), (coarse_counter-1) / (coarse_factor-1)
 				endif
 
 			end do
@@ -527,6 +625,21 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 	 	write(discard_unit,*) x_flowline_store(1), y_flowline_store(1)
 	endif
 
+	close(unit=667)
+
+	if(kill) THEN
+		write(6,*) "killing"
+	!	stop
+	endif
+
+	if(oscillating) THEN
+		write(6,*) "oscillating"
+	!	stop
+	endif
+	if(outside) THEN
+		write(6,*) "outside"
+	!	stop
+	endif
 
 end subroutine write_flowline
 
