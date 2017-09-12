@@ -7,22 +7,24 @@ program boundary_mask
 	use read_polygons
 	use read_minmax
 	use boundary_mask_mod
+	use pip
 
 	integer :: counter, polygon_counter, istat, points_counter, next_point, current_index, commandline_count
 	integer :: min_x_index, min_y_index, max_x_index, max_y_index, x_counter, y_counter
-	integer, parameter ::   gmt_unit=80
+	integer, parameter ::   gmt_unit=80, gmt_unit2=90
 
 
 
 
 	double precision :: grid_spacing, current_x, current_y, next_x, next_y, slope, intercept
 	double precision :: min_x_segment, min_y_segment, max_x_segment, max_y_segment, cell_x, cell_y
+	double precision :: min_x, max_x, min_y, max_y
 
 	character(len=256) :: arg_in
 
-	character (len=256), dimension(2) :: gmt_files
+	character (len=256), dimension(2) :: gmt_files, gmt_files2
 
-	logical :: inside
+	logical :: inside, was_inside
 
 	commandline_count = command_argument_count()
 
@@ -39,6 +41,9 @@ program boundary_mask
 	! for plotting, testing
 	gmt_files(1) = "boundary_mask_1.txt"
 	gmt_files(2) = "boundary_mask_2.txt"
+
+	gmt_files2(1) = "inside_mask_1.txt"
+	gmt_files2(2) = "inside_mask_2.txt"
 
 	! read in the polygons
 	call read_polygons_init()
@@ -129,6 +134,47 @@ program boundary_mask
 
 	end do
 
+	! add a mask for the interior of the polygons
+
+	do counter = 1, 2, 1
+
+		do polygon_counter = 1, number_polygons(counter), 1
+			min_x = minval( x_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
+			max_x = maxval( x_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
+			min_y = minval( y_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
+			max_y = maxval( y_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
+
+			do x_counter = 1, number_x_grid
+
+				do y_counter = 1, number_y_grid
+
+					if(mask(counter,x_counter,y_counter) == 0) THEN 
+
+						cell_x = dble(x_counter-1) * grid_spacing + min_x_grid
+						cell_y = dble(y_counter-1) * grid_spacing + min_y_grid
+
+						if(cell_x > min_x .and. cell_x < max_x .and. cell_y > min_y .and. cell_y < max_y) THEN ! should check
+
+							inside = point_in_polygon(&
+							  x_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)),&
+							  y_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)),&
+							  cell_x, cell_y, polygon_points(counter,polygon_counter))
+
+							if(inside) THEN
+								mask(counter,x_counter,y_counter) = 2
+							endif
+
+						endif
+
+
+
+					endif
+
+
+				end do
+			end do
+		end do
+	end do
 
 	! write out the files
 
@@ -139,7 +185,7 @@ program boundary_mask
 
 
 		open(unit=gmt_unit, file=gmt_files(counter), access="sequential", form="formatted",  status="replace")
-
+		open(unit=gmt_unit2, file=gmt_files2(counter), access="sequential", form="formatted",  status="replace")
 
 		do x_counter = 1, number_x_grid
 			do y_counter = 1, number_y_grid
@@ -149,10 +195,15 @@ program boundary_mask
 					write(gmt_unit, *) dble(x_counter-1) * grid_spacing + min_x_grid, &
 							 	 dble(y_counter-1) * grid_spacing + min_y_grid
 				endif
+				if(mask(counter,x_counter, y_counter) == 2) THEN
+					write(gmt_unit2, *) dble(x_counter-1) * grid_spacing + min_x_grid, &
+							 	 dble(y_counter-1) * grid_spacing + min_y_grid
+				endif
 
 			end do
 		end do
 		close(unit=gmt_unit)
+		close(unit=gmt_unit2)
 
 	end do
 

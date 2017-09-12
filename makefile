@@ -61,8 +61,8 @@ interpolate_direction: interpolate_direction.f90 point_in_polygon.o direction_mo
 flowline_direction: flowline_direction.f90 point_in_polygon.o direction_mod.o read_minmax.o crossover.o tin.o boundary_mask_mod.o read_polygons.o
 	$(FC) -o flowline_direction  $(FCFLAGS) flowline_direction.f90 point_in_polygon.o direction_mod.o read_minmax.o crossover.o tin.o boundary_mask_mod.o read_polygons.o
 
-boundary_mask: boundary_mask.f90 read_polygons.o read_minmax.o boundary_mask_mod.o
-	$(FC) -o boundary_mask  $(FCFLAGS) boundary_mask.f90 read_polygons.o read_minmax.o boundary_mask_mod.o
+boundary_mask: boundary_mask.f90 read_polygons.o read_minmax.o boundary_mask_mod.o point_in_polygon.o
+	$(FC) -o boundary_mask  $(FCFLAGS) boundary_mask.f90 read_polygons.o read_minmax.o boundary_mask_mod.o point_in_polygon.o
 
 
 
