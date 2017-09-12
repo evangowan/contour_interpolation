@@ -10,7 +10,7 @@ program flowlines3
 
 	implicit none
 
-	integer :: commandline_count, polygon_counter, points_counter
+	integer :: commandline_count, polygon_counter, points_counter, dummy_counter
 	integer ::  index_next, extra_counter, extra_total, flowline_point_count
 	integer, parameter :: gmt_unit = 90, max_flowline_points = 100000, discard_unit=200
 
@@ -112,6 +112,8 @@ program flowlines3
 
 			call flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_spacing, r_increment,&
 	                   oscillating,hit_saddle,outside,flowline_point_count,reverse, polygon_compare)
+
+
 
 			call write_flowline(x_flowline_store,y_flowline_store,distance_store,flowline_point_count,gmt_unit,&
 				  discard_unit,hit_saddle, oscillating, outside,reverse)
@@ -222,9 +224,10 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 	logical, intent(out) :: hit_saddle, oscillating, outside
 	integer, intent(in) :: polygon_compare
 
-	double precision :: grid_x(2), grid_y(2), distance, dx, dy, total_distance
+	double precision :: grid_x(2), grid_y(2), distance, dx, dy, total_distance, dummy_x, dummy_y
 	integer :: x_grid_index, y_grid_index, x_grid_point, y_grid_point, counter1, counter2
-	logical :: return_status
+	integer :: dummy_x_grid_index, dummy_y_grid_index
+	logical :: return_status, dummy_return_status
 	double precision, dimension(2,2) :: corner_values, corner_values_x, corner_values_y
 
 	double precision, parameter :: increment_minimum = 10e-5
@@ -233,6 +236,8 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 
 
 	integer :: x_index_check, y_index_check
+
+	integer :: previous_mask
 
 	total_distance = 0.
 	flowline_point_count = 1
@@ -250,11 +255,15 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 		write(6,*) "normal direction"
 	endif
 
+	previous_mask = 0
+
 	loop: do
 		! find grid points
 
 		call find_grid_corner(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
 		   grid_spacing, x_grid_index, y_grid_index, return_status)
+
+		
 
 
 
@@ -276,29 +285,38 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 		corner_values_x = cos(corner_values)
 		corner_values_y = sin(corner_values)
 
-		if(x_grid_index /= x_index_check .or. y_grid_index /= y_index_check) THEN
-		write(666,*) ">"
-		write(666,*) grid_x(1), grid_y(1)
-		write(666,*) grid_x(2), grid_y(1)
-		write(666,*) grid_x(2), grid_y(2)
-		write(666,*) grid_x(1), grid_y(2)
-		write(666,*) grid_x(1), grid_y(1)
+		! debugging
+		call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
+		   grid_spacing, dummy_x_grid_index, dummy_y_grid_index, dummy_return_status)
+		call find_grid_location(dummy_x_grid_index, dummy_y_grid_index, grid_spacing, dummy_x, dummy_y)
 
-		write(666,*) ">>"
-		write(666,*) grid_x(1), grid_y(1), grid_x(2), grid_y(1), grid_x(2), grid_y(2), grid_x(1), grid_y(2)
-		write(666,*) grid_x(1)+corner_values_x(1,1), grid_y(1)+corner_values_y(1,1), grid_x(2)+corner_values_x(2,1),&
-		 grid_y(1)+corner_values_y(2,1), grid_x(2)+corner_values_x(2,2), grid_y(2)+corner_values_y(2,2), &
-		 grid_x(1)+corner_values_x(1,2), grid_y(2)+corner_values_y(1,2)
+
+		if(dummy_x_grid_index /= x_index_check .or. dummy_y_grid_index /= y_index_check) THEN
+		write(666,*) ">"
+!		write(666,*) grid_x(1), grid_y(1)
+!		write(666,*) grid_x(2), grid_y(1)
+!		write(666,*) grid_x(2), grid_y(2)
+!		write(666,*) grid_x(1), grid_y(2)
+!		write(666,*) grid_x(1), grid_y(1)
+
+		write(666,*) dummy_x-grid_spacing/2., dummy_y-grid_spacing/2.
+		write(666,*) dummy_x+grid_spacing/2., dummy_y-grid_spacing/2.
+		write(666,*) dummy_x+grid_spacing/2., dummy_y+grid_spacing/2.
+		write(666,*) dummy_x-grid_spacing/2., dummy_y+grid_spacing/2.
+		write(666,*) dummy_x-grid_spacing/2., dummy_y-grid_spacing/2.
+
+!		write(666,*) ">>"
+!		write(666,*) grid_x(1), grid_y(1), grid_x(2), grid_y(1), grid_x(2), grid_y(2), grid_x(1), grid_y(2)
+!		write(666,*) grid_x(1)+corner_values_x(1,1), grid_y(1)+corner_values_y(1,1), grid_x(2)+corner_values_x(2,1),&
+!		 grid_y(1)+corner_values_y(2,1), grid_x(2)+corner_values_x(2,2), grid_y(2)+corner_values_y(2,2), &
+!		 grid_x(1)+corner_values_x(1,2), grid_y(2)+corner_values_y(1,2)
 		write(666,*) ">>>"
-			x_index_check = x_grid_index
-			y_index_check = y_grid_index
+!			x_index_check = x_grid_index
+!			y_index_check = y_grid_index
+			x_index_check = dummy_x_grid_index
+			y_index_check = dummy_y_grid_index
 		endif
 
-!		if(reverse) THEN ! make it go the other way
-!			corner_values_x = -corner_values_x
-!			corner_values_y = -corner_values_y
-
-!		endif
 
 		dx = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
 			grid_x,grid_y,corner_values_x)
@@ -343,7 +361,7 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 		y_flowline_store(flowline_point_count) = y_flowline_store(flowline_point_count-1) +&
 		  r_increment * dy
 
-		write(666,*) x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count)
+
 
 		if(.not. return_status) THEN
 
@@ -360,7 +378,7 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 		call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
 		   grid_spacing, x_grid_point, y_grid_point, return_status)
 
-		if(mask(polygon_compare,x_grid_point, y_grid_point) == 1 ) THEN
+		if(mask(polygon_compare,x_grid_point, y_grid_point) == 1 .or. previous_mask == 1 ) THEN
 			call cross_polygon(x_flowline_store(flowline_point_count-1), &
 			  y_flowline_store(flowline_point_count-1), x_flowline_store(flowline_point_count), &
 			  y_flowline_store(flowline_point_count), end_line, grid_spacing,polygon_compare)
@@ -368,12 +386,17 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 		endif
 
 
+
+		write(666,*) x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+			mask(polygon_compare,x_grid_point, y_grid_point)
+
+
 		total_distance = total_distance + sqrt((x_flowline_store(flowline_point_count)-&
 		  x_flowline_store(flowline_point_count-1))**2 + (y_flowline_store(flowline_point_count)&
 		  -y_flowline_store(flowline_point_count-1))**2)
 
 		distance_store(flowline_point_count) = total_distance
-
+		previous_mask = mask(polygon_compare,x_grid_point, y_grid_point)
 
 		if(end_line) then
 			exit loop
