@@ -411,11 +411,11 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 
 	logical :: 	return_status
 
-	if (oscillating .or. outside  .or. hit_saddle) THEN
-
-		write(discard_unit,'(A1,I7,I7)') divider_character
+!	if (oscillating .or. outside  .or. hit_saddle) THEN
+	if (oscillating .or. outside ) THEN
+		write(discard_unit,'(A1,1X,L1,1X,L1,1X,L1)') divider_character, oscillating, outside, hit_saddle
 	else
-		write(gmt_unit,'(A1,I7,I7)') divider_character
+		write(gmt_unit,'(A1)') divider_character
 	endif
 
 	! reduce the amount of points
@@ -477,7 +477,8 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 		if(reverse) THEN
 			do coarse_counter = coarse_factor, 1, -1
 
-				if(oscillating .or. outside .or. hit_saddle) THEN
+!				if(oscillating .or. outside .or. hit_saddle) THEN
+				if(oscillating .or. outside) THEN
 					write(discard_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
 				else
 
@@ -488,8 +489,8 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 
 		else
 			do coarse_counter = 1, coarse_factor, 1
-
-				if(oscillating .or. outside .or. hit_saddle) THEN
+!				if(oscillating .or. outside .or. hit_saddle) THEN
+				if(oscillating .or. outside) THEN
 					write(discard_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter)
 				else
 
