@@ -451,7 +451,11 @@ program merge_polygons
 
 	call remove_existing_polygons()
 
-	call create_polygons()
+
+	do while (any(line_mask))
+
+		call create_polygons()
+	end do
 
 	call read_lines_clear()
 
