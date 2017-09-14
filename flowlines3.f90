@@ -522,7 +522,7 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 				else
 
 					write(gmt_unit,*) coarse_x(coarse_counter), coarse_y(coarse_counter), &
-						dble(1-(coarse_counter-1) / (coarse_factor-1))
+						dble(coarse_factor-coarse_counter) / dble(coarse_factor-1)
 				endif
 
 			end do
