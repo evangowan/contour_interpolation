@@ -1,7 +1,7 @@
 FC = gfortran
 
-#FCFLAGS = -g -fbacktrace -fbounds-check  -ffpe-trap='zero'
-FCFLAGS = -O2 
+FCFLAGS = -g -fbacktrace -fbounds-check  -ffpe-trap='zero'
+#FCFLAGS = -O2 
 
 # if compiling with the Intel Fortran compiler, you need to add an extra flag
 #FCFLAGS = -O2 -assume byterecl
@@ -77,3 +77,7 @@ contour_creation: contour_creation.f90 spline.o read_polygons.o
 
 eliminate_outside: eliminate_outside.f90 point_in_polygon.o  read_polygons.o
 	$(FC) -o eliminate_outside  $(FCFLAGS) eliminate_outside.f90 point_in_polygon.o  read_polygons.o
+
+
+merge_polygons: merge_polygons.f90
+	$(FC) -o merge_polygons  $(FCFLAGS) merge_polygons.f90
