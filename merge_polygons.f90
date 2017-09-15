@@ -217,6 +217,8 @@ subroutine remove_existing_polygons()
 		
 		else if(close_number(x_store(counter,1),x_store(counter,points_store(counter))) .and. &
 			  close_number(y_store(counter,1),y_store(counter,points_store(counter))) ) THEN
+
+			! for debugging, commented out
 			call write_polygon(x_store(counter,1:points_store(counter)),y_store(counter,1:points_store(counter)),&
 			  points_store(counter))
 			line_mask(counter) = .false.
@@ -264,11 +266,16 @@ subroutine create_polygons()
 
 	find_first: do
 
-		if(line_mask(starting_line)) THEN
+		if(line_mask(starting_line) .and. points_store(starting_line) > 2) THEN
 			exit find_first
 		else
 			starting_line = starting_line + 1
 
+		endif
+
+		if(starting_line == number_lines) THEN
+			line_mask = .false.
+			return
 		endif
 
 	end do find_first
@@ -327,7 +334,7 @@ subroutine create_polygons()
 			min_distance(4) = distance_end(min_index(4),2)
 			min_distance(5) = distance(x_temp(start_index),y_temp(start_index),x_temp(end_index),y_temp(end_index))
 
-			if( .not. counted_first) THEN ! should at least link two lines
+			if( end_index - start_index == 1  ) THEN ! should at least link two lines
 				min_distance(5) = 1e10
 				counted_first = .true.
 			endif
@@ -385,6 +392,7 @@ subroutine create_polygons()
 
 			else if(min_distance_index == 5) THEN ! complete polygon
 
+				write(6,*) "completed polygon"
 				incomplete = .false.
 
 
