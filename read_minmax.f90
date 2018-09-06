@@ -42,11 +42,11 @@ subroutine run_read_minmax(grid_spacing)
 
 
 	! grid creation step
-	! buffer by one grid unit
-	min_x_grid = dble(floor(min_x/grid_spacing)) * grid_spacing - grid_spacing
-	min_y_grid = dble(floor(min_y/grid_spacing)) * grid_spacing - grid_spacing
-	max_x_grid = dble(ceiling(max_x/grid_spacing)) * grid_spacing + grid_spacing
-	max_y_grid = dble(ceiling(max_y/grid_spacing)) * grid_spacing + grid_spacing
+	! buffer by two grid unit
+	min_x_grid = dble(floor(min_x/grid_spacing)) * grid_spacing - grid_spacing * 2
+	min_y_grid = dble(floor(min_y/grid_spacing)) * grid_spacing - grid_spacing * 2
+	max_x_grid = dble(ceiling(max_x/grid_spacing)) * grid_spacing + grid_spacing * 2
+	max_y_grid = dble(ceiling(max_y/grid_spacing)) * grid_spacing + grid_spacing * 2
 
 
 	number_x_grid = nint((max_x_grid-min_x_grid)/grid_spacing)

@@ -91,7 +91,9 @@ psxy ${first_file} -R -J -Wthick,red  -O -P >> ${plot}
 
 plot="flowline_test.ps"
 
-./../flowlines ${grid_spacing}
+#./../flowlines ${grid_spacing}
+
+./../flowline_direction ${grid_spacing} ${tin_file_size}
 
 psxy ${second_file}  ${J_option} ${R_option} ${B_option} -Wthick,blue -K -P  > ${plot}
 
@@ -119,9 +121,11 @@ psxy final_contour.txt -R -J -Sd0.15 -Gbrown -O -K -P >> ${plot}
 
 psxy final_contour.txt -R -J -Sd0.15 -Gmagenta -O -K -P >> ${plot}
 
-psxy fort.546 -R -J -Sc0.22 -Wthick,yellow -O -K -P >> ${plot}
 
-psxy fort.547 -R -J -Sc0.22 -Wthick,pink -O -K -P >> ${plot}
+
+#psxy fort.546 -R -J -Sc0.22 -Wthick,yellow -O -K -P >> ${plot}
+
+#psxy fort.547 -R -J -Sc0.22 -Wthick,pink -O -K -P >> ${plot}
 
 triangulate direction_file.bin  -bi3d -M | psxy  -R -J -Wthin,black -O -P  -V >> ${plot} 
 
@@ -144,6 +148,7 @@ grdcontour surface.nc -J -R  -O -Cshades.cpt -W0.75p,black -A0.2+f9p,black+gwhit
 
 grdcontour surface.nc -J -R  -O -Cshades.cpt -W0.75p,black -A0.2+f9p,black+gwhite -Dcontours.txt
 
+exit 0
 ./../eliminate_outside
 
 plot="eliminate_test.ps"

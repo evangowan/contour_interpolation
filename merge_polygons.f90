@@ -184,21 +184,36 @@ subroutine write_polygon(polygon_x, polygon_y,polygon_point_count)
 	integer, intent(in) :: polygon_point_count
 	double precision, dimension(polygon_point_count), intent(in) :: polygon_x, polygon_y
 
-	integer :: counter
+	integer :: counter, end_count
 
 
 	call check_out_open()
 
 
-	write(out_unit,'(A1)') ">"
+	if(polygon_x(1) == polygon_x(polygon_point_count) .and. polygon_y(1) == polygon_y(polygon_point_count)) THEN
+		end_count = polygon_point_count - 1
+	else
+		end_count = polygon_point_count
+	end if
 
-	do counter = 1, polygon_point_count, 1
 
-		write(out_unit,*) polygon_x(counter), polygon_y(counter)
+	if (end_count > 2) THEN
 
-	end do
+		write(out_unit,'(A1)') ">"
+
+		write(out_unit,*) polygon_x(1), polygon_y(1)
+
+		do counter = 2, end_count, 1
+
+			if(polygon_x(counter) /= polygon_x(counter-1) .and. polygon_y(counter) /= polygon_y(counter-1)) THEN
+				write(out_unit,*) polygon_x(counter), polygon_y(counter)
+			endif
+
+		end do
+
+		write(out_unit,*) polygon_x(1), polygon_y(1)
 	
-
+	end if
 
 end subroutine write_polygon
 
