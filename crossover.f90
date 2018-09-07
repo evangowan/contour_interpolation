@@ -173,14 +173,7 @@ subroutine crossover_point(a_x1, a_y1, a_x2, a_y2, b_x1, b_y1, b_x2, b_y2, cross
 
 
 
-	slope1 = (a_y2 - a_y1) / (a_x2 - a_x1) 
-	intercept1 = a_y2 - a_x2 * slope1
 
-	slope2 = (b_y2 - b_y1) / (b_x2 - b_x1) 
-	intercept2 = b_y2 - b_x2 * slope2
-
-	temp_x = (intercept2 - intercept1) / (slope1 - slope2)
-	temp_y = slope1 * temp_x + intercept1
 
 	if(a_x2 == a_x1) then
 		temp_x = a_x2
@@ -188,6 +181,17 @@ subroutine crossover_point(a_x1, a_y1, a_x2, a_y2, b_x1, b_y1, b_x2, b_y2, cross
 	elseif(b_x2 == b_x1) THEN
 		temp_x = b_x2
 		temp_y = slope1 * temp_x + intercept1
+	else 
+
+		slope1 = (a_y2 - a_y1) / (a_x2 - a_x1) 
+		intercept1 = a_y2 - a_x2 * slope1
+
+		slope2 = (b_y2 - b_y1) / (b_x2 - b_x1) 
+		intercept2 = b_y2 - b_x2 * slope2
+
+		temp_x = (intercept2 - intercept1) / (slope1 - slope2)
+		temp_y = slope1 * temp_x + intercept1
+
 	endif
 
 
