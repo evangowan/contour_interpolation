@@ -60,6 +60,10 @@ program find_direction
 	logical :: true_inside, is_inside
 	logical, dimension(:,:,:), allocatable :: inside 
 
+	! time values
+
+      integer,dimension(8) :: values
+
 
 ! 1)  read in the polygons
 
@@ -72,6 +76,12 @@ program find_direction
 		stop
 	endif
 
+
+	call date_and_time(VALUES=values)
+	write(6,*) "finished reading in polygon: ", values(5), values(6), values(7)
+	
+	call date_and_time(VALUES=values)
+	write(6,'(A30,I2,A1,I2,A1,I2,A1)') "finished reading in polygon: ", values(5), ":", values(6), ":", values(7)
 
 
 	
@@ -93,13 +103,27 @@ program find_direction
 
 				polygon_loop2: do polygon_counter2 = 1, number_polygons(opposite_step)
 
-					! checks to see if this point is inside of another polygon, if so, it is flagged
-					inside(counter,polygon_counter,points_counter) = point_in_polygon( &
-					  x_coordinates(opposite_step,polygon_counter2,1:polygon_points(opposite_step,polygon_counter2)), &
-					  y_coordinates(opposite_step,polygon_counter2,1:polygon_points(opposite_step,polygon_counter2)), &
-					  x_coordinates(counter,polygon_counter,points_counter), &
-					  y_coordinates(counter,polygon_counter,points_counter), &
-					  polygon_points(opposite_step,polygon_counter2))
+
+					if( x_coordinates(counter,polygon_counter,points_counter) >= &
+							poly_x_min(opposite_step,polygon_counter2) .and. &
+					    x_coordinates(counter,polygon_counter,points_counter) <= &
+							poly_x_max(opposite_step,polygon_counter2) .and. &
+					    y_coordinates(counter,polygon_counter,points_counter) <= &
+							poly_y_max(opposite_step,polygon_counter2) .and. &
+					    y_coordinates(counter,polygon_counter,points_counter) >= &
+							poly_y_min(opposite_step,polygon_counter2)  ) THEN
+
+						! checks to see if this point is inside of another polygon, if so, it is flagged
+						inside(counter,polygon_counter,points_counter) = point_in_polygon( &
+						  x_coordinates(opposite_step,polygon_counter2,1:polygon_points(opposite_step,polygon_counter2)), &
+						  y_coordinates(opposite_step,polygon_counter2,1:polygon_points(opposite_step,polygon_counter2)), &
+						  x_coordinates(counter,polygon_counter,points_counter), &
+						  y_coordinates(counter,polygon_counter,points_counter), &
+						  polygon_points(opposite_step,polygon_counter2))
+					else
+						inside(counter,polygon_counter,points_counter) = .false.
+					endif
+
 
 					if(inside(counter,polygon_counter,points_counter)) THEN
 						cycle points_loop
@@ -110,6 +134,10 @@ program find_direction
 			end do points_loop
 		end do polygon_loop
 	end do find_inside
+
+	call date_and_time(VALUES=values)
+	write(6,'(A27,I2,A1,I2,A1,I2,A1)') "finished point in polygon: ", values(5), ":", values(6), ":", values(7)
+	
 
 ! 3) find the direction vectors
 
@@ -253,6 +281,10 @@ program find_direction
 		write(6,*) "problem deallocating arrays in find_direction"
 		stop
 	endif
+
+	call date_and_time(VALUES=values)
+	write(6,'(A27,I2,A1,I2,A1,I2,A1)') "finished program: ", values(5), ":", values(6), ":", values(7)
+
 
 
 end program find_direction

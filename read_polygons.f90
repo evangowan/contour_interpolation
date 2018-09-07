@@ -17,6 +17,7 @@ module read_polygons
 	integer, dimension(:,:), allocatable :: polygon_points
 
 	double precision, dimension(:,:,:), allocatable :: x_coordinates, y_coordinates
+	double precision, dimension(:,:), allocatable :: poly_x_min, poly_y_min, poly_y_max, poly_x_max
 	double precision, save :: fining_increment
 	character (len=256), dimension(2) :: step_file
 
@@ -52,7 +53,8 @@ subroutine read_polygons_init()
 	call read_params()
 	max_polygons = max(number_polygons(1),number_polygons(2))
 	allocate(x_coordinates(2,max_polygons,max_points), y_coordinates(2,max_polygons,max_points), &
-		   polygon_points(2,max_polygons), stat=istat)
+		   polygon_points(2,max_polygons),poly_x_min(2,max_polygons), poly_y_min(2,max_polygons),&
+		   poly_y_max(2,max_polygons), poly_x_max(2,max_polygons),  stat=istat)
 	if(istat /=0) THEN
 		write(6,*) "problem allocating arrays in read_polygons"
 		stop
@@ -136,10 +138,13 @@ subroutine read_polygons_init()
 		end do read_polygons
 
 
+
 		close(unit=step_unit)
 	end do read_files
 
 ! check to see if the start point is the same as the end point. The point_in_polygon routine does not work if it is, so this loop removes it
+
+! Also determines the extreme values for the polygon
 
 	do counter = 1, 2, 1
 
@@ -154,6 +159,11 @@ subroutine read_polygons_init()
 
 			endif
 
+			poly_x_min(counter,polygon_counter) = minval(x_coordinates(counter,polygon_counter,:))
+			poly_y_min(counter,polygon_counter) = minval(y_coordinates(counter,polygon_counter,:))
+			poly_y_max(counter,polygon_counter) = maxval(x_coordinates(counter,polygon_counter,:))
+			poly_x_max(counter,polygon_counter) = maxval(y_coordinates(counter,polygon_counter,:))
+
 		end do
 
 	end do
@@ -167,7 +177,7 @@ subroutine read_polygons_clear()
 
 	integer :: istat
 
-	deallocate(x_coordinates, y_coordinates, polygon_points, stat=istat)
+	deallocate(x_coordinates, y_coordinates, polygon_points, poly_x_min, poly_y_min, poly_y_max, poly_x_max, stat=istat)
 	if(istat /=0) THEN
 		write(6,*) "problem deallocating arrays in read_polygons"
 		stop
