@@ -74,7 +74,7 @@ program interpolate_direction
 	character (len=256), parameter :: gmt_file = "direction_grid.txt"
 
 
-	logical :: check_inside, check_infinity
+	logical :: check_inside, check_infinity, check_infinity2
 	logical, dimension(:,:), allocatable :: polygon_max
 
 	! requires two input parameters from command line, the grid spacing and the size of the tin file in bytes
@@ -165,23 +165,40 @@ program interpolate_direction
 			! the first part of the interpolation is to find the slope and intercept of one of the line segments of the triangle, 
 			! these will remain constant throughout the next steps
 
-			slope1 = (y_triangle(1) - y_triangle(2)) / (x_triangle(1) - x_triangle(2))
-			angle1 = atan2((y_triangle(1) - y_triangle(2)),(x_triangle(1) - x_triangle(2)))
-			intercept1 = y_triangle(1) - slope1 * x_triangle(1)
+			if (x_triangle(1) /= x_triangle(2)) THEN
+
+				slope1 = (y_triangle(1) - y_triangle(2)) / (x_triangle(1) - x_triangle(2))
+				angle1 = atan2((y_triangle(1) - y_triangle(2)),(x_triangle(1) - x_triangle(2)))
+				intercept1 = y_triangle(1) - slope1 * x_triangle(1)
+				check_infinity = .false.
+
+			else
+
+				slope1 = 1.e15
+				if(y_triangle(1) > y_triangle(2)) THEN
+					angle1 = pi
+				else
+					angle1 = -pi
+				endif
+
+				intercept1 = x_triangle(1)
+				check_infinity = .true.
+
+			endif
 
 			distance1 = sqrt( (y_triangle(1) - y_triangle(2))**2 + (x_triangle(1) - x_triangle(2))**2)
 
-			if(x_triangle(1) == x_triangle(2)) THEN
-				check_infinity = .true.
-				write(6,*) "slope1 is infinite"
-				write(61,*) x_triangle(1), y_triangle(1)
-				write(61,*) x_triangle(2), y_triangle(2)
-				write(61,*) x_triangle(3), y_triangle(3)
-
-
-			else
+!			if(x_triangle(1) == x_triangle(2)) THEN
+!				check_infinity = .true.
+!				write(6,*) "slope1 is infinite"
+!				write(61,*) x_triangle(1), y_triangle(1)
+!				write(61,*) x_triangle(2), y_triangle(2)
+!				write(61,*) x_triangle(3), y_triangle(3)
+!
+!
+!			else
 				check_infinity = .false.
-			endif
+!			endif
 		
 			! find the range of x and y values, and convert them to a range for the direction_grid array
 
@@ -227,15 +244,23 @@ program interpolate_direction
 						if(point_in_polygon(x_triangle, y_triangle, current_x, current_y, points_in_triangle) &
 						   .eqv.check_inside) THEN ! proceed!
 
-							slope2 = (y_triangle(3) - current_y) / (x_triangle(3) - current_x)
-							angle2 = atan2((y_triangle(1) - y_triangle(2)),(x_triangle(1) - x_triangle(2)))
-							intercept2 = y_triangle(3) - slope2 * x_triangle(3)
+
+							if(x_triangle(3) /= current_x) THEN
+								slope2 = (y_triangle(3) - current_y) / (x_triangle(3) - current_x)
+								angle2 = atan2((y_triangle(1) - y_triangle(2)),(x_triangle(1) - x_triangle(2)))
+								intercept2 = y_triangle(3) - slope2 * x_triangle(3)
+								check_infinity2 = .false.
+							else
+
+								check_infinity2 = .true.
+
+							endif
 
 							if(.not.check_infinity) THEN
 
 								! find the crossover point between the two lines
 
-								if(x_triangle(3) /= current_x) THEN
+								if(.not. check_infinity2) THEN
 
 									crossover_x = (intercept1 - intercept2) / (slope2 - slope1)
 									crossover_y = slope1 * crossover_x + intercept1
@@ -250,6 +275,7 @@ program interpolate_direction
 							else
 
 								if(x_triangle(3) /= current_x) THEN
+									write(6,*) "slope1 is infinite"
 									crossover_x = x_triangle(1)
 									crossover_y = slope2 * x_triangle(1) + intercept2
 								else ! both lines are parallel
