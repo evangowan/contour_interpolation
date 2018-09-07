@@ -225,6 +225,8 @@ contains
 		
 		double precision :: min_cell_x, min_cell_y, max_cell_x, max_cell_y, slope, intercept, crossover_point
 
+
+
 		inside_cell = .false.
 
 		min_cell_x = cell_x - grid_spacing / 2.
@@ -248,49 +250,58 @@ contains
 		if(y1 > max_cell_y .and. y2 > max_cell_y) THEN
 			return
 		endif
+
+		if(x2 /= x1) THEN
 		
-		slope = (y2-y1) / (x2-x1)
-		intercept = y1 - slope * x1
+			slope = (y2-y1) / (x2-x1)
+			intercept = y1 - slope * x1
 
-		! min_cell_x
-		crossover_point = min_cell_x * slope + intercept
+			! min_cell_x
+			crossover_point = min_cell_x * slope + intercept
 
-		if (crossover_point >= min_cell_y .and. crossover_point <= max_cell_y) THEN
-			inside_cell = .true.
-			return
-		endif
+			if (crossover_point >= min_cell_y .and. crossover_point <= max_cell_y) THEN
+				inside_cell = .true.
+				return
+			endif
 
-		! max_cell_x
-		crossover_point = max_cell_x * slope + intercept
 
-		if (crossover_point >= min_cell_y .and. crossover_point <= max_cell_y) THEN
-			inside_cell = .true.
-			return
+			! max_cell_x
+			crossover_point = max_cell_x * slope + intercept
+
+			if (crossover_point >= min_cell_y .and. crossover_point <= max_cell_y) THEN
+				inside_cell = .true.
+				return
+			endif
+
 		endif
 
 
 	
+		if (y2 /= y1) THEN
+			slope = (x2-x1) / (y2-y1)
+			intercept = x1 - slope * y1
 
-		slope = (x2-x1) / (y2-y1)
-		intercept = x1 - slope * y1
 
 
+			! min_cell_x
+			crossover_point = min_cell_y * slope + intercept
 
-		! min_cell_x
-		crossover_point = min_cell_y * slope + intercept
+			if (crossover_point >= min_cell_x .and. crossover_point <= max_cell_x) THEN
+				inside_cell = .true.
+				return
+			endif
 
-		if (crossover_point >= min_cell_x .and. crossover_point <= max_cell_x) THEN
-			inside_cell = .true.
-			return
+			! max_cell_x
+			crossover_point = max_cell_y * slope + intercept
+
+			if (crossover_point >= min_cell_x .and. crossover_point <= max_cell_x) THEN
+				inside_cell = .true.
+				return
+			endif
+
 		endif
 
-		! max_cell_x
-		crossover_point = max_cell_y * slope + intercept
-
-		if (crossover_point >= min_cell_x .and. crossover_point <= max_cell_x) THEN
-			inside_cell = .true.
-			return
-		endif
+		
 
 
 	end function inside_cell
