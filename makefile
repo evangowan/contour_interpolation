@@ -47,6 +47,9 @@ tin.o: tin.f90
 grid_direction_test: grid_direction_test.f90
 	$(FC) -o grid_direction_test  $(FCFLAGS) grid_direction_test.f90
 
+direction_flow: direction_flow.f90
+	$(FC) -o direction_flow  $(FCFLAGS) direction_flow.f90
+
 find_direction: find_direction.f90 point_in_polygon.o direction_mod.o read_polygons.o
 	$(FC) -o find_direction  $(FCFLAGS) find_direction.f90 point_in_polygon.o direction_mod.o read_polygons.o
 
