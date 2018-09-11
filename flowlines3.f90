@@ -41,7 +41,7 @@ program flowlines3
 	if(commandline_count /= 2) THEN
 		write(6,*) "not enough args: ", commandline_count
 		write(6,*) "correct usage of this program:"
-		write(6,*) "flowlines grid_spacing reverse(T/F)"
+		write(6,*) "flowlines3 grid_spacing reverse(T/F)"
 		stop
 	endif
 

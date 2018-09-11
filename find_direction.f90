@@ -125,6 +125,7 @@ program find_direction
 					endif
 
 
+
 					if(inside(counter,polygon_counter,points_counter)) THEN
 						cycle points_loop
 					endif
@@ -134,6 +135,7 @@ program find_direction
 			end do points_loop
 		end do polygon_loop
 	end do find_inside
+
 
 	call date_and_time(VALUES=values)
 	write(6,'(A27,I2,A1,I2,A1,I2,A1)') "finished point in polygon: ", values(5), ":", values(6), ":", values(7)
@@ -224,17 +226,23 @@ program find_direction
 					 y_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)),  &
 					 temp_x, temp_y, polygon_points(counter,polygon_counter))
 
+
+
+
 				if (.not. is_inside) THEN
 
 					angle = check_angle(angle + pi)
 
 				endif
 
+
+
 				if(inside(counter,polygon_counter,points_counter) .neqv. true_inside) THEN ! the vector should be pointing in the opposite direction
 
 					angle = check_angle(angle + pi)
 !
 				endif
+
 
 				! create a unit vector
 

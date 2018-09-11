@@ -161,8 +161,8 @@ subroutine read_polygons_init()
 
 			poly_x_min(counter,polygon_counter) = minval(x_coordinates(counter,polygon_counter,:))
 			poly_y_min(counter,polygon_counter) = minval(y_coordinates(counter,polygon_counter,:))
-			poly_y_max(counter,polygon_counter) = maxval(x_coordinates(counter,polygon_counter,:))
-			poly_x_max(counter,polygon_counter) = maxval(y_coordinates(counter,polygon_counter,:))
+			poly_y_max(counter,polygon_counter) = maxval(y_coordinates(counter,polygon_counter,:))
+			poly_x_max(counter,polygon_counter) = maxval(x_coordinates(counter,polygon_counter,:))
 
 		end do
 
