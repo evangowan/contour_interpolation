@@ -124,7 +124,7 @@ subroutine cross_itself(x_flowline_store, y_flowline_store, flowline_point_count
 		x_flowline_store(end_index) = crossover_x
 		y_flowline_store(end_index) = crossover_y
 		end_line = .true.
-		write(547,*) crossover_x, crossover_y
+!		write(547,*) crossover_x, crossover_y
 	else
 		end_line = .false.
 	end if

@@ -1,5 +1,8 @@
 program flowlines3
 
+! Calculates the path from the outer boundary to the inner boundary through the vector field defined in interpolate_direction
+! currently very slow
+
 ! read in the boundaries, boundary masks, direction field and interpolate between the boundaries
 
 	use read_polygons
@@ -110,9 +113,10 @@ program flowlines3
 			x_flowline_store(flowline_point_count) = x_coordinates(polygon_set,polygon_counter,points_counter) 
 			y_flowline_store(flowline_point_count) = y_coordinates(polygon_set,polygon_counter,points_counter)
 
-			call flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_spacing, r_increment,&
+!			call flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_spacing, r_increment,&
+!	                   oscillating,hit_saddle,outside,flowline_point_count,reverse, polygon_compare)
+			call flowline_loop_runga_kutta(x_flowline_store,y_flowline_store,distance_store,grid_spacing, r_increment,&
 	                   oscillating,hit_saddle,outside,flowline_point_count,reverse, polygon_compare)
-
 
 
 			if(flowline_point_count > 2) THEN
@@ -221,6 +225,302 @@ subroutine interpolate_between_points(x1, y1, z1, x2, y2, z2, x_out, y_out, z_ex
 end subroutine interpolate_between_points
 
 
+subroutine flowline_loop_runga_kutta(x_flowline_store,y_flowline_store,distance_store,grid_spacing, r_increment,&
+	                   oscillating,hit_saddle,outside,flowline_point_count,reverse, polygon_compare)
+
+! found on these online notes
+! http://graphics.cs.ucdavis.edu/~joy/ecs277/other-notes/Numerical-Methods-for-Particle-Tracing-in-Vector-Fields.pdf
+
+	use direction_grid_mod
+	use boundary_mask_mod
+	use crossover
+
+	implicit none
+	integer, parameter :: max_flowline_points = 100000
+	double precision, intent(in) :: grid_spacing, r_increment
+	integer, intent(out) :: flowline_point_count
+	double precision, dimension(max_flowline_points), intent(inout) :: x_flowline_store, y_flowline_store
+	double precision, dimension(max_flowline_points), intent(out) :: distance_store
+	logical, intent(in) :: reverse
+	logical, intent(out) :: hit_saddle, oscillating, outside
+	integer, intent(in) :: polygon_compare
+
+	integer :: oscillation_check
+
+	double precision, parameter :: pi = 3.141592653589793
+
+	double precision :: grid_x(2), grid_y(2), distance, dx, dy, total_distance, dummy_x, dummy_y, angle
+	integer :: x_grid_index, y_grid_index, x_grid_point, y_grid_point, counter1, counter2
+	integer :: dummy_x_grid_index, dummy_y_grid_index
+	logical :: return_status, dummy_return_status
+	double precision, dimension(2,2) :: corner_values, corner_values_x, corner_values_y
+
+	double precision :: k1_x, k1_y, k2_x, k2_y, k3_x, k3_y, k4_x, k4_y
+	double precision :: temp_x, temp_y
+
+	double precision :: increment_minimum
+
+
+
+	integer :: x_index_check, y_index_check
+
+	integer :: previous_mask
+
+	increment_minimum = r_increment * 1.0e-5
+
+	total_distance = 0.
+	flowline_point_count = 1
+
+	oscillating = .false.
+	hit_saddle = .false.
+	outside = .false.
+
+	x_index_check = 0
+	y_index_check = 0
+
+	if(reverse) THEN
+		write(6,*) "detected reverse"
+	else
+		write(6,*) "normal direction"
+	endif
+
+	previous_mask = 0
+
+	loop: do
+		! find grid points
+
+
+		! first step of the runga kutta algorithm
+
+		call find_grid_corner(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
+		   grid_spacing, x_grid_index, y_grid_index, return_status)
+
+		call find_grid_location(x_grid_index, y_grid_index, grid_spacing, grid_x(1), grid_y(1))
+
+		grid_x(2) = grid_x(1) + grid_spacing
+		grid_y(2) = grid_y(1) + grid_spacing
+
+
+		corner_values(1,1) = direction_grid(x_grid_index, y_grid_index)
+		corner_values(2,1) = direction_grid(x_grid_index+1, y_grid_index)
+		corner_values(2,2) = direction_grid(x_grid_index+1, y_grid_index+1)
+		corner_values(1,2) = direction_grid(x_grid_index, y_grid_index+1)
+
+
+		corner_values_x = cos(corner_values)
+		corner_values_y = sin(corner_values)
+
+
+
+
+		dx = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+			grid_x,grid_y,corner_values_x)
+		dy = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+			grid_x,grid_y,corner_values_y)
+		if(reverse) then
+			dx = -dx
+			dy = -dy
+		endif
+
+
+		angle = atan2(dy,dx)
+		
+		k1_x = r_increment * cos(angle)
+		k1_y = r_increment * sin(angle)
+
+		! second step of the runga kutta algorithm
+
+		temp_x = x_flowline_store(flowline_point_count) + k1_x / 2.0
+		temp_y = y_flowline_store(flowline_point_count) + k1_y / 2.0
+
+		call find_grid_corner(temp_x, temp_y,&
+		   grid_spacing, x_grid_index, y_grid_index, return_status)
+
+		call find_grid_location(x_grid_index, y_grid_index, grid_spacing, grid_x(1), grid_y(1))
+
+		grid_x(2) = grid_x(1) + grid_spacing
+		grid_y(2) = grid_y(1) + grid_spacing
+
+
+		corner_values(1,1) = direction_grid(x_grid_index, y_grid_index)
+		corner_values(2,1) = direction_grid(x_grid_index+1, y_grid_index)
+		corner_values(2,2) = direction_grid(x_grid_index+1, y_grid_index+1)
+		corner_values(1,2) = direction_grid(x_grid_index, y_grid_index+1)
+
+
+		corner_values_x = cos(corner_values)
+		corner_values_y = sin(corner_values)
+
+		dx = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+			grid_x,grid_y,corner_values_x)
+		dy = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+			grid_x,grid_y,corner_values_y)
+		if(reverse) then
+			dx = -dx
+			dy = -dy
+		endif
+
+		angle = atan2(dy,dx)
+
+		k2_x = r_increment * cos(angle)
+		k2_y = r_increment * sin(angle)
+
+		! third step of the Runga Kutta
+
+		temp_x = x_flowline_store(flowline_point_count) + k2_x / 2.0
+		temp_y = y_flowline_store(flowline_point_count) + k2_y / 2.0
+
+
+		call find_grid_corner(temp_x, temp_y,&
+		   grid_spacing, x_grid_index, y_grid_index, return_status)
+
+		call find_grid_location(x_grid_index, y_grid_index, grid_spacing, grid_x(1), grid_y(1))
+
+		grid_x(2) = grid_x(1) + grid_spacing
+		grid_y(2) = grid_y(1) + grid_spacing
+
+
+		corner_values(1,1) = direction_grid(x_grid_index, y_grid_index)
+		corner_values(2,1) = direction_grid(x_grid_index+1, y_grid_index)
+		corner_values(2,2) = direction_grid(x_grid_index+1, y_grid_index+1)
+		corner_values(1,2) = direction_grid(x_grid_index, y_grid_index+1)
+
+
+		corner_values_x = cos(corner_values)
+		corner_values_y = sin(corner_values)
+
+		dx = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+			grid_x,grid_y,corner_values_x)
+		dy = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+			grid_x,grid_y,corner_values_y)
+		if(reverse) then
+			dx = -dx
+			dy = -dy
+		endif
+
+		angle = atan2(dy,dx)
+
+		k3_x = r_increment * cos(angle)
+		k3_y = r_increment * sin(angle)
+		
+
+		! fourth step of the Runga Kutta
+
+		temp_x = (x_flowline_store(flowline_point_count) + k3_x)
+		temp_y = (y_flowline_store(flowline_point_count) + k3_y) 
+
+
+		call find_grid_corner(temp_x, temp_y,&
+		   grid_spacing, x_grid_index, y_grid_index, return_status)
+
+		call find_grid_location(x_grid_index, y_grid_index, grid_spacing, grid_x(1), grid_y(1))
+
+		grid_x(2) = grid_x(1) + grid_spacing
+		grid_y(2) = grid_y(1) + grid_spacing
+
+
+		corner_values(1,1) = direction_grid(x_grid_index, y_grid_index)
+		corner_values(2,1) = direction_grid(x_grid_index+1, y_grid_index)
+		corner_values(2,2) = direction_grid(x_grid_index+1, y_grid_index+1)
+		corner_values(1,2) = direction_grid(x_grid_index, y_grid_index+1)
+
+
+		corner_values_x = cos(corner_values)
+		corner_values_y = sin(corner_values)
+
+		dx = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+			grid_x,grid_y,corner_values_x)
+		dy = bicubic(x_flowline_store(flowline_point_count),y_flowline_store(flowline_point_count),&
+			grid_x,grid_y,corner_values_y)
+		if(reverse) then
+			dx = -dx
+			dy = -dy
+		endif
+
+		angle = atan2(dy,dx)
+		k4_x = r_increment * cos(angle)
+		k4_y = r_increment * sin(angle)
+
+
+		flowline_point_count = flowline_point_count + 1
+
+		if(flowline_point_count > max_flowline_points) THEN
+			write(6,*) "possibly oscillating"
+			oscillating = .true.
+			exit loop
+		endif
+
+		x_flowline_store(flowline_point_count) = x_flowline_store(flowline_point_count-1) + (k1_x + 2.0*k2_x + 2.0*k3_x + k4_x) / 6.0
+		y_flowline_store(flowline_point_count) = y_flowline_store(flowline_point_count-1) + (k1_y + 2.0*k2_y + 2.0*k3_y + k4_y) / 6.0
+
+
+		! check to see if the line crosses over the boundary
+
+		! TODO This is not working properly
+
+		end_line = .false.
+
+
+		call find_grid_index(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
+		   grid_spacing, x_grid_point, y_grid_point, return_status)
+
+		if(mask(polygon_compare,x_grid_point, y_grid_point) == 1 .or. previous_mask == 1 ) THEN
+			call cross_polygon(x_flowline_store(flowline_point_count-1), &
+			  y_flowline_store(flowline_point_count-1), x_flowline_store(flowline_point_count), &
+			  y_flowline_store(flowline_point_count), end_line, grid_spacing,polygon_compare)
+
+		endif
+ 
+
+		total_distance = total_distance + sqrt((x_flowline_store(flowline_point_count)-&
+		  x_flowline_store(flowline_point_count-1))**2 + (y_flowline_store(flowline_point_count)&
+		  -y_flowline_store(flowline_point_count-1))**2)
+
+
+
+		distance_store(flowline_point_count) = total_distance
+
+
+		previous_mask = mask(polygon_compare,x_grid_point, y_grid_point)
+
+
+		if(.not. return_status .or. (mask(1,x_grid_point, y_grid_point) == 0 .and. mask(2,x_grid_point, y_grid_point) == 0)) THEN
+
+			outside =.true.
+			exit loop
+
+		endif
+
+
+		if(mask(1,x_grid_point, y_grid_point) == 2 .and. mask(2,x_grid_point, y_grid_point) == 2) THEN
+			! inside both
+			outside =.true.
+			exit loop
+
+		endif
+
+
+		if(end_line) then
+			exit loop
+		endif
+
+		! checks to see if the point crosses over itself, indicating it hit a peak
+
+		call cross_itself(x_flowline_store(1:flowline_point_count), y_flowline_store(1:flowline_point_count), &
+			 flowline_point_count, end_line)
+
+		if(end_line) then
+			write(6,*) "crossed over"
+			exit loop
+		endif
+
+
+	end do loop
+
+	write(6,*) "number of points:", flowline_point_count
+
+end subroutine flowline_loop_runga_kutta
+
 
 subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_spacing, r_increment,&
 	                   oscillating,hit_saddle,outside,flowline_point_count,reverse, polygon_compare)
@@ -245,7 +545,7 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 	logical :: return_status, dummy_return_status
 	double precision, dimension(2,2) :: corner_values, corner_values_x, corner_values_y
 
-	double precision, parameter :: increment_minimum = 10e-6
+	double precision :: increment_minimum
 
 	double precision, parameter :: pi = 3.141592653589793
 
@@ -253,6 +553,8 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 	integer :: x_index_check, y_index_check
 
 	integer :: previous_mask
+
+	increment_minimum = r_increment * 1.0e-5
 
 	total_distance = 0.
 	flowline_point_count = 1
@@ -278,14 +580,7 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 		call find_grid_corner(x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count),&
 		   grid_spacing, x_grid_index, y_grid_index, return_status)
 
-		
-
-
-
 		call find_grid_location(x_grid_index, y_grid_index, grid_spacing, grid_x(1), grid_y(1))
-
-
-
 
 		grid_x(2) = grid_x(1) + grid_spacing
 		grid_y(2) = grid_y(1) + grid_spacing
@@ -339,9 +634,6 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 		  r_increment * dy
 
 
-
-
-
 		! check to see if the line crosses over the boundary
 
 		end_line = .false.
@@ -357,10 +649,6 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 
 		endif
  
-
-
-
-
 
 		total_distance = total_distance + sqrt((x_flowline_store(flowline_point_count)-&
 		  x_flowline_store(flowline_point_count-1))**2 + (y_flowline_store(flowline_point_count)&
@@ -393,6 +681,8 @@ subroutine flowline_loop(x_flowline_store,y_flowline_store,distance_store,grid_s
 		if(end_line) then
 			exit loop
 		endif
+
+
 
 
 	end do loop
