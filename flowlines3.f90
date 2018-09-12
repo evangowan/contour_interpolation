@@ -97,8 +97,10 @@ program flowlines3
 	do polygon_counter = 1, number_polygons(polygon_set)
 
 		do points_counter = 1, polygon_points(polygon_set, polygon_counter)
-			write(6,*) "polygon: ", polygon_counter, "/", number_polygons(polygon_set), " point:", points_counter, "/", &
-				polygon_points(polygon_set, polygon_counter), reverse
+			if(mod(points_counter,100) == 0) THEN
+				write(6,*) "polygon: ", polygon_counter, "/", number_polygons(polygon_set), " point:", points_counter, "/", &
+					polygon_points(polygon_set, polygon_counter), reverse
+			endif
 			if(points_counter < polygon_points(polygon_set, polygon_counter) ) then
 				index_next = points_counter + 1
 			else
@@ -252,7 +254,7 @@ subroutine flowline_loop_runga_kutta(x_flowline_store,y_flowline_store,distance_
 	double precision :: grid_x(2), grid_y(2), distance, dx, dy, total_distance, dummy_x, dummy_y, angle
 	integer :: x_grid_index, y_grid_index, x_grid_point, y_grid_point, counter1, counter2
 	integer :: dummy_x_grid_index, dummy_y_grid_index
-	logical :: return_status, dummy_return_status
+	logical :: return_status, dummy_return_status, mask_check1, mask_check2, mask_check3
 	double precision, dimension(2,2) :: corner_values, corner_values_x, corner_values_y
 
 	double precision :: k1_x, k1_y, k2_x, k2_y, k3_x, k3_y, k4_x, k4_y
@@ -278,13 +280,16 @@ subroutine flowline_loop_runga_kutta(x_flowline_store,y_flowline_store,distance_
 	x_index_check = 0
 	y_index_check = 0
 
-	if(reverse) THEN
-		write(6,*) "detected reverse"
-	else
-		write(6,*) "normal direction"
-	endif
+!	if(reverse) THEN
+!		write(6,*) "detected reverse"
+!	else
+!		write(6,*) "normal direction"
+!	endif
 
 	previous_mask = 0
+
+!	write(680,'(A1)') ">"
+!	write(680,*) x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count), 0
 
 	loop: do
 		! find grid points
@@ -468,6 +473,11 @@ subroutine flowline_loop_runga_kutta(x_flowline_store,y_flowline_store,distance_
 			call cross_polygon(x_flowline_store(flowline_point_count-1), &
 			  y_flowline_store(flowline_point_count-1), x_flowline_store(flowline_point_count), &
 			  y_flowline_store(flowline_point_count), end_line, grid_spacing,polygon_compare)
+
+!				write(680,*) x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count), 1, end_line
+
+!		else
+!				write(680,*) x_flowline_store(flowline_point_count), y_flowline_store(flowline_point_count), 0, "F"
 
 		endif
  
@@ -841,19 +851,19 @@ subroutine write_flowline(x_flowline_store,y_flowline_store,distance_store,flowl
 
 
 
-	if(kill) THEN
-		write(6,*) "killing"
+!	if(kill) THEN
+!		write(6,*) "killing"
 	!	stop
-	endif
+!	endif
 
-	if(oscillating) THEN
-		write(6,*) "oscillating"
+!	if(oscillating) THEN
+!		write(6,*) "oscillating"
 	!	stop
-	endif
-	if(outside) THEN
-		write(6,*) "outside"
+!	endif
+!	if(outside) THEN
+!		write(6,*) "outside"
 	!	stop
-	endif
+!	endif
 
 end subroutine write_flowline
 

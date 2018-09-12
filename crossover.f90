@@ -146,6 +146,7 @@ subroutine crossover_point(a_x1, a_y1, a_x2, a_y2, b_x1, b_y1, b_x2, b_y2, cross
 	double precision :: b_min_cell_x, b_min_cell_y, b_max_cell_x, b_max_cell_y
 	double precision :: temp_x, temp_y
 
+	double precision, parameter :: epsilon_factor = 1.0e-6
 
 	logical :: vertical_line1, vertical_line2
 
@@ -172,22 +173,39 @@ subroutine crossover_point(a_x1, a_y1, a_x2, a_y2, b_x1, b_y1, b_x2, b_y2, cross
 	is_crossover = .false.
 
 
+	slope1 = (a_y2 - a_y1) / (a_x2 - a_x1) 
+	intercept1 = a_y2 - a_x2 * slope1
 
+	slope2 = (b_y2 - b_y1) / (b_x2 - b_x1) 
+	intercept2 = b_y2 - b_x2 * slope2
 
+	if (abs(a_x2 - a_x1) < epsilon_factor .and. abs(b_x2 - b_x1) < epsilon_factor) then ! both lines are parallel to y
+		! very hacky, but I am lazy
+		if (a_max_cell_y >= b_min_cell_y) THEN ! there is overlap
+			crossover_x = a_x2
+			crossover_y = b_min_cell_y
+			is_crossover = .true.
+			return
+		else
 
-	if(a_x2 == a_x1) then
+			crossover_x = a_x2
+			crossover_y = b_min_cell_y
+			is_crossover = .false.
+			return
+
+		endif
+	elseif(abs(a_x2 - a_x1) < epsilon_factor) then ! first line is parallel to the y-axis
 		temp_x = a_x2
 		temp_y = slope2 * temp_x + intercept2
-	elseif(b_x2 == b_x1) THEN
+	elseif(abs(b_x2 - b_x1) < epsilon_factor) THEN ! second line is parallel to the y-axis
 		temp_x = b_x2
 		temp_y = slope1 * temp_x + intercept1
+
+	elseif(abs(b_y2 - b_y1) < epsilon_factor) THEN ! I didn't think this was necessary, but I guess it is
+		temp_y = b_y2
+		temp_x = ( temp_y - intercept1 ) / slope1
+
 	else 
-
-		slope1 = (a_y2 - a_y1) / (a_x2 - a_x1) 
-		intercept1 = a_y2 - a_x2 * slope1
-
-		slope2 = (b_y2 - b_y1) / (b_x2 - b_x1) 
-		intercept2 = b_y2 - b_x2 * slope2
 
 		temp_x = (intercept2 - intercept1) / (slope1 - slope2)
 		temp_y = slope1 * temp_x + intercept1
@@ -196,14 +214,14 @@ subroutine crossover_point(a_x1, a_y1, a_x2, a_y2, b_x1, b_y1, b_x2, b_y2, cross
 
 
 	is_crossover = .false.
-	if(temp_x > a_min_cell_x) THEN
-	  if(temp_x < a_max_cell_x) THEN
-	     if(temp_x > b_min_cell_x) THEN
-		 if(temp_x < b_max_cell_x) THEN
-	   	   if(temp_y > a_min_cell_y) THEN
-		     if(temp_y < a_max_cell_y) THEN
-	   		 if(temp_y > b_min_cell_y) THEN
-			   if(temp_y < b_max_cell_y) THEN
+	if(temp_x >= a_min_cell_x) THEN
+	  if(temp_x <= a_max_cell_x) THEN
+	     if(temp_x >= b_min_cell_x) THEN
+		 if(temp_x <= b_max_cell_x) THEN
+	   	   if(temp_y >= a_min_cell_y) THEN
+		     if(temp_y <= a_max_cell_y) THEN
+	   		 if(temp_y >= b_min_cell_y) THEN
+			   if(temp_y <= b_max_cell_y) THEN
 
 				is_crossover = .true.
 			   endif
