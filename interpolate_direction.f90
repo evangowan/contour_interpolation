@@ -232,6 +232,8 @@ program interpolate_direction
 					current_x = dble(x_counter-1) * grid_spacing + min_x_grid
 					current_y = dble(y_counter-1) * grid_spacing + min_y_grid
 
+					
+
 					! first check if the current point has already been added
 
 					if( direction_mask(x_counter, y_counter)) THEN
@@ -256,17 +258,21 @@ program interpolate_direction
 
 							endif
 
+							if(abs(slope2-slope1) < 1.0e-8) THEN ! prevents the lines from being parallel
+								slope2 = slope2 + 1.1e-8
+							endif
+
 							if(.not.check_infinity) THEN
 
 								! find the crossover point between the two lines
 
 								if(.not. check_infinity2) THEN
-
+									
 									crossover_x = (intercept1 - intercept2) / (slope2 - slope1)
 									crossover_y = slope1 * crossover_x + intercept1
 
 								else
-									write(6,*) "slope2 is infinite"
+								!	write(6,*) "slope2 is infinite"
 									crossover_x = current_x
 									crossover_y = slope1 * current_x + intercept1
 
@@ -275,7 +281,7 @@ program interpolate_direction
 							else
 
 								if(x_triangle(3) /= current_x) THEN
-									write(6,*) "slope1 is infinite"
+								!	write(6,*) "slope1 is infinite"
 									crossover_x = x_triangle(1)
 									crossover_y = slope2 * x_triangle(1) + intercept2
 								else ! both lines are parallel

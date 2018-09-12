@@ -527,7 +527,7 @@ subroutine flowline_loop_runga_kutta(x_flowline_store,y_flowline_store,distance_
 
 	end do loop
 
-	write(6,*) "number of points:", flowline_point_count
+!	write(6,*) "number of points:", flowline_point_count
 
 end subroutine flowline_loop_runga_kutta
 
