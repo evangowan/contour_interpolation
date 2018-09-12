@@ -54,11 +54,12 @@ program boundary_mask
 
 
 
-	mask = 0 ! mask is true when it has the value of 1
+	mask = 3 ! mask is true when it has the value of 1
 
 	do counter = 1, 2, 1
 
 		do polygon_counter = 1, number_polygons(counter), 1
+
 
 
 			do points_counter = 1, polygon_points(counter,polygon_counter), 1
@@ -139,16 +140,19 @@ program boundary_mask
 	do counter = 1, 2, 1
 
 		do polygon_counter = 1, number_polygons(counter), 1
+
+!			write(6,*) "Margin: ", counter, "polygon:", polygon_counter, "/", number_polygons(counter)
+
 			min_x = minval( x_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
 			max_x = maxval( x_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
 			min_y = minval( y_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
 			max_y = maxval( y_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
 
 			do x_counter = 1, number_x_grid
-
+!				write(6,*) "grid x", x_counter, "/", number_x_grid
 				do y_counter = 1, number_y_grid
 
-					if(mask(counter,x_counter,y_counter) == 0) THEN 
+					if(mask(counter,x_counter,y_counter) == 3) THEN 
 
 						cell_x = dble(x_counter-1) * grid_spacing + min_x_grid
 						cell_y = dble(y_counter-1) * grid_spacing + min_y_grid
@@ -162,11 +166,79 @@ program boundary_mask
 
 							if(inside) THEN
 								mask(counter,x_counter,y_counter) = 2
+								! check adjacent cells, and if they also zero, change them
+
+								if(x_counter < number_x_grid) THEN
+									if(mask(counter,x_counter+1,y_counter) == 3) THEN
+										mask(counter,x_counter+1,y_counter) = 2
+									endif
+								endif
+								if(y_counter < number_y_grid) THEN
+									if(mask(counter,x_counter,y_counter+1) == 3) THEN
+										mask(counter,x_counter,y_counter+1) = 2
+									endif
+								endif
+							else
+								mask(counter,x_counter,y_counter) = 0
+								! check adjacent cells, and if they also zero, change them
+
+								if(x_counter < number_x_grid) THEN
+									if(mask(counter,x_counter+1,y_counter) == 3) THEN
+										mask(counter,x_counter+1,y_counter) = 0
+									endif
+								endif
+								if(y_counter < number_y_grid) THEN
+									if(mask(counter,x_counter,y_counter+1) == 3) THEN
+										mask(counter,x_counter,y_counter+1) = 0
+									endif
+								endif
+
+							endif
+
+						else ! should be outside
+
+							mask(counter,x_counter,y_counter) = 0
+							! check adjacent cells, and if they also zero, change them
+
+							if(x_counter < number_x_grid) THEN
+								if(mask(counter,x_counter+1,y_counter) == 3) THEN
+									mask(counter,x_counter+1,y_counter) = 0
+								endif
+							endif
+							if(y_counter < number_y_grid) THEN
+								if(mask(counter,x_counter,y_counter+1) == 3) THEN
+									mask(counter,x_counter,y_counter+1) = 0
+								endif
 							endif
 
 						endif
 
+					else if(mask(counter,x_counter,y_counter) == 0) THEN ! fill in adjacent cells if they are also outside
 
+						if(x_counter < number_x_grid) THEN
+							if(mask(counter,x_counter+1,y_counter) == 3) THEN
+								mask(counter,x_counter+1,y_counter) = 0
+							endif
+						endif
+						if(y_counter < number_y_grid) THEN
+							if(mask(counter,x_counter,y_counter+1) == 3) THEN
+								mask(counter,x_counter,y_counter+1) = 0
+							endif
+						endif
+
+					else if(mask(counter,x_counter,y_counter) == 2) THEN ! fill in adjacent cells if they are also inside
+
+						if(x_counter < number_x_grid) THEN
+							if(mask(counter,x_counter+1,y_counter) == 3) THEN
+								mask(counter,x_counter+1,y_counter) = 2
+							endif
+						endif
+
+						if(y_counter < number_y_grid) THEN
+							if(mask(counter,x_counter,y_counter+1) == 3) THEN
+								mask(counter,x_counter,y_counter+1) = 2
+							endif 
+						endif
 
 					endif
 
