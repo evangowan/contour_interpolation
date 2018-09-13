@@ -449,7 +449,7 @@ subroutine flowline_loop_runga_kutta(x_flowline_store,y_flowline_store,distance_
 
 		flowline_point_count = flowline_point_count + 1
 
-		if(flowline_point_count > max_flowline_points) THEN
+		if(flowline_point_count > 10000) THEN
 			write(6,*) "possibly oscillating"
 			oscillating = .true.
 			exit loop
@@ -461,7 +461,6 @@ subroutine flowline_loop_runga_kutta(x_flowline_store,y_flowline_store,distance_
 
 		! check to see if the line crosses over the boundary
 
-		! TODO This is not working properly
 
 		end_line = .false.
 
