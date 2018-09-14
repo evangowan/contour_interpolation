@@ -18,7 +18,7 @@ program boundary_mask
 
 	double precision :: grid_spacing, current_x, current_y, next_x, next_y, slope, intercept
 	double precision :: min_x_segment, min_y_segment, max_x_segment, max_y_segment, cell_x, cell_y
-	double precision :: min_x, max_x, min_y, max_y
+	double precision, allocatable, dimension(:,:) :: min_x, max_x, min_y, max_y
 
 	character(len=256) :: arg_in
 
@@ -56,10 +56,25 @@ program boundary_mask
 
 	mask = 3 ! mask is true when it has the value of 1
 
+	allocate(min_x(2,max_polygons),max_x(2,max_polygons), min_y(2,max_polygons), max_y(2,max_polygons), stat=istat)
+	if(istat /=0) THEN
+		write(6,*) "problem allocating min and max arrays in boundary_mask.f90"
+		stop
+	endif
+
 	do counter = 1, 2, 1
 
 		do polygon_counter = 1, number_polygons(counter), 1
-
+			
+			! find the maximum extent of the polygons
+			min_x(counter,polygon_counter) = &
+			  minval( x_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
+			max_x(counter,polygon_counter) = &
+			  maxval( x_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
+			min_y(counter,polygon_counter) = &
+			  minval( y_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
+			max_y(counter,polygon_counter) = &
+			  maxval( y_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
 
 
 			do points_counter = 1, polygon_points(counter,polygon_counter), 1
@@ -139,81 +154,56 @@ program boundary_mask
 
 	do counter = 1, 2, 1
 
-		do polygon_counter = 1, number_polygons(counter), 1
+		do x_counter = 1, number_x_grid
 
-!			write(6,*) "Margin: ", counter, "polygon:", polygon_counter, "/", number_polygons(counter)
+			do y_counter = 1, number_y_grid
 
-			min_x = minval( x_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
-			max_x = maxval( x_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
-			min_y = minval( y_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
-			max_y = maxval( y_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)))
 
-			do x_counter = 1, number_x_grid
-!				write(6,*) "grid x", x_counter, "/", number_x_grid
-				do y_counter = 1, number_y_grid
 
-					if(mask(counter,x_counter,y_counter) == 3) THEN 
+				if(mask(counter,x_counter,y_counter) == 3) THEN 
 
-						cell_x = dble(x_counter-1) * grid_spacing + min_x_grid
-						cell_y = dble(y_counter-1) * grid_spacing + min_y_grid
+					cell_x = dble(x_counter-1) * grid_spacing + min_x_grid
+					cell_y = dble(y_counter-1) * grid_spacing + min_y_grid
 
-						if(cell_x > min_x .and. cell_x < max_x .and. cell_y > min_y .and. cell_y < max_y) THEN ! should check
+
+
+					inside = .false.
+					polygon_loop: do polygon_counter = 1, number_polygons(counter), 1
+
+						if(cell_x >= min_x(counter,polygon_counter) .and. cell_x <= max_x(counter,polygon_counter) .and. &
+						   cell_y >= min_y(counter,polygon_counter) .and. cell_y <= max_y(counter,polygon_counter)) THEN ! should check
 
 							inside = point_in_polygon(&
 							  x_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)),&
 							  y_coordinates(counter,polygon_counter,1:polygon_points(counter,polygon_counter)),&
 							  cell_x, cell_y, polygon_points(counter,polygon_counter))
-
-							if(inside) THEN
-								mask(counter,x_counter,y_counter) = 2
-								! check adjacent cells, and if they also zero, change them
-
-								if(x_counter < number_x_grid) THEN
-									if(mask(counter,x_counter+1,y_counter) == 3) THEN
-										mask(counter,x_counter+1,y_counter) = 2
-									endif
-								endif
-								if(y_counter < number_y_grid) THEN
-									if(mask(counter,x_counter,y_counter+1) == 3) THEN
-										mask(counter,x_counter,y_counter+1) = 2
-									endif
-								endif
-							else
-								mask(counter,x_counter,y_counter) = 0
-								! check adjacent cells, and if they also zero, change them
-
-								if(x_counter < number_x_grid) THEN
-									if(mask(counter,x_counter+1,y_counter) == 3) THEN
-										mask(counter,x_counter+1,y_counter) = 0
-									endif
-								endif
-								if(y_counter < number_y_grid) THEN
-									if(mask(counter,x_counter,y_counter+1) == 3) THEN
-										mask(counter,x_counter,y_counter+1) = 0
-									endif
-								endif
-
-							endif
-
-						else ! should be outside
-
-							mask(counter,x_counter,y_counter) = 0
-							! check adjacent cells, and if they also zero, change them
-
-							if(x_counter < number_x_grid) THEN
-								if(mask(counter,x_counter+1,y_counter) == 3) THEN
-									mask(counter,x_counter+1,y_counter) = 0
-								endif
-							endif
-							if(y_counter < number_y_grid) THEN
-								if(mask(counter,x_counter,y_counter+1) == 3) THEN
-									mask(counter,x_counter,y_counter+1) = 0
-								endif
-							endif
-
 						endif
 
-					else if(mask(counter,x_counter,y_counter) == 0) THEN ! fill in adjacent cells if they are also outside
+						if (inside) THEN
+							exit polygon_loop
+						endif
+
+					end do polygon_loop
+
+
+
+					if(inside) THEN
+						mask(counter,x_counter,y_counter) = 2
+						! check adjacent cells, and if they also zero, change them
+
+						if(x_counter < number_x_grid) THEN
+							if(mask(counter,x_counter+1,y_counter) == 3) THEN
+								mask(counter,x_counter+1,y_counter) = 2
+							endif
+						endif
+						if(y_counter < number_y_grid) THEN
+							if(mask(counter,x_counter,y_counter+1) == 3) THEN
+								mask(counter,x_counter,y_counter+1) = 2
+							endif
+						endif
+					else
+						mask(counter,x_counter,y_counter) = 0
+						! check adjacent cells, and if they also zero, change them
 
 						if(x_counter < number_x_grid) THEN
 							if(mask(counter,x_counter+1,y_counter) == 3) THEN
@@ -226,24 +216,40 @@ program boundary_mask
 							endif
 						endif
 
-					else if(mask(counter,x_counter,y_counter) == 2) THEN ! fill in adjacent cells if they are also inside
-
-						if(x_counter < number_x_grid) THEN
-							if(mask(counter,x_counter+1,y_counter) == 3) THEN
-								mask(counter,x_counter+1,y_counter) = 2
-							endif
-						endif
-
-						if(y_counter < number_y_grid) THEN
-							if(mask(counter,x_counter,y_counter+1) == 3) THEN
-								mask(counter,x_counter,y_counter+1) = 2
-							endif 
-						endif
-
 					endif
 
+				else if(mask(counter,x_counter,y_counter) == 0) THEN ! fill in adjacent cells if they are also outside
 
-				end do
+					if(x_counter < number_x_grid) THEN
+						if(mask(counter,x_counter+1,y_counter) == 3) THEN
+							mask(counter,x_counter+1,y_counter) = 0
+						endif
+					endif
+					if(y_counter < number_y_grid) THEN
+						if(mask(counter,x_counter,y_counter+1) == 3) THEN
+							mask(counter,x_counter,y_counter+1) = 0
+						endif
+					endif
+
+				else if(mask(counter,x_counter,y_counter) == 2) THEN ! fill in adjacent cells if they are also inside
+
+					if(x_counter < number_x_grid) THEN
+						if(mask(counter,x_counter+1,y_counter) == 3) THEN
+							mask(counter,x_counter+1,y_counter) = 2
+						endif
+					endif
+
+					if(y_counter < number_y_grid) THEN
+						if(mask(counter,x_counter,y_counter+1) == 3) THEN
+							mask(counter,x_counter,y_counter+1) = 2
+						endif 
+					endif
+
+				endif
+
+
+
+
 			end do
 		end do
 	end do
@@ -264,12 +270,12 @@ program boundary_mask
 
 
 				if(mask(counter,x_counter, y_counter) == 1) THEN
-					write(gmt_unit, *) dble(x_counter-1) * grid_spacing + min_x_grid, &
-							 	 dble(y_counter-1) * grid_spacing + min_y_grid
+					write(gmt_unit, *) nint(dble(x_counter-1) * grid_spacing + min_x_grid), &
+							 	 nint(dble(y_counter-1) * grid_spacing + min_y_grid)
 				endif
 				if(mask(counter,x_counter, y_counter) == 2) THEN
-					write(gmt_unit2, *) dble(x_counter-1) * grid_spacing + min_x_grid, &
-							 	 dble(y_counter-1) * grid_spacing + min_y_grid
+					write(gmt_unit2, *) nint(dble(x_counter-1) * grid_spacing + min_x_grid), &
+							 	 nint(dble(y_counter-1) * grid_spacing + min_y_grid)
 				endif
 
 			end do
@@ -282,6 +288,12 @@ program boundary_mask
 	! clear memory
 	call read_polygons_clear()
 	call boundary_mask_clear()
+
+	deallocate(min_x,max_x, min_y, max_y, stat=istat)
+	if(istat /=0) THEN
+		write(6,*) "problem deallocating min and max arrays in boundary_mask.f90"
+		stop
+	endif
 
 
 
